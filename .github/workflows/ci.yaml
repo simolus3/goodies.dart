@@ -23,7 +23,7 @@ jobs:
       
       - name: Install dependencies
         run: |-
-          cd shelf_multipart
+          pushd shelf_multipart
           dart pub get
           popd
 
