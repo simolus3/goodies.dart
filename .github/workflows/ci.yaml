@@ -7,18 +7,19 @@ on:
     branches: [ main ]
 
 env:
+  PUB_ENVIRONMENT: bot.github
   PUB_CACHE: "/tmp/pub_cache/"
 
 jobs:
   setup:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Cache pub dependencies
         uses: actions/cache@v2
         with:
           path: /tmp/pub_cache
           key: ${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
-      - uses: actions/checkout@v2
       - uses: dart-lang/setup-dart@v1
       
       - name: Install dependencies
@@ -35,12 +36,12 @@ jobs:
         working-directory: shelf_multipart
 
     steps:
+      - uses: actions/checkout@v2
       - name: Cache pub dependencies
         uses: actions/cache@v2
         with:
           path: /tmp/pub_cache
           key: ${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
-      - uses: actions/checkout@v2
       - uses: dart-lang/setup-dart@v1
       
       - name: Install dependencies
