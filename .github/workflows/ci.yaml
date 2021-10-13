@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PUB_CACHE: "/tmp/pub_cache/"
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cache pub dependencies
+        uses: actions/cache@v2
+        with:
+          path: /tmp/pub_cache
+          key: ${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+      - uses: actions/checkout@v2
+      - uses: dart-lang/setup-dart@v1
+      
+      - name: Install dependencies
+        run: >-
+          pushd shelf_multipart
+          dart pub get
+          popd
+
+  shelf_multipart:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shelf_multipart
+
+    steps:
+      - name: Cache pub dependencies
+        uses: actions/cache@v2
+        with:
+          path: /tmp/pub_cache
+          key: ${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+      - uses: actions/checkout@v2
+      - uses: dart-lang/setup-dart@v1
+      
+      - name: Install dependencies
+        run: dart pub get
+      - name: Verify format
+        run: dart format --output=none --set-exit-if-changed .
+      - name: Analyze project
+        run: dart analyze --fatal-infos
+      - name: Run tests
+        run: dart test
