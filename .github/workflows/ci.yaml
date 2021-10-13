@@ -22,13 +22,14 @@ jobs:
       - uses: dart-lang/setup-dart@v1
       
       - name: Install dependencies
-        run: >-
-          pushd shelf_multipart
+        run: |-
+          cd shelf_multipart
           dart pub get
           popd
 
   shelf_multipart:
     runs-on: ubuntu-latest
+    needs: setup
     defaults:
       run:
         working-directory: shelf_multipart
