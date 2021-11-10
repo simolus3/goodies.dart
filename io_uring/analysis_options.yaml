@@ -1,0 +1,7 @@
+include: package:extra_pedantic/analysis_options.yaml
+
+linter:
+  rules:
+    no_default_cases: false
+    avoid_slow_async_io: false # not so slow anymore ;)
+    avoid_private_typedef_functions: false # useful for dart:ffi
