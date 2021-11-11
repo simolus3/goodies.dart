@@ -91,6 +91,12 @@ typedef _register_dart = int Function(
     Pointer<dart_io_ring>, int, Pointer<NativeType>, int);
 typedef _socket_native = Int32 Function(Int32, Int32, Int32);
 typedef _socket_dart = int Function(int, int, int);
+typedef _bind_native = Int32 Function(Int32, Pointer<Void>, Uint32);
+typedef _bind_dart = int Function(int, Pointer<Void>, int);
+typedef _name_native = Int32 Function(Int32, Pointer<Void>, Pointer<Uint32>);
+typedef _name_dart = int Function(int, Pointer<Void>, Pointer<Uint32>);
+typedef _listen_native = Int32 Function(Int32, Int32);
+typedef _listen_dart = int Function(int, int);
 typedef _strerror_native = Pointer<Utf8> Function(Int32);
 typedef _strerror_dart = Pointer<Utf8> Function(int);
 typedef _umask_native = Uint32 Function(Uint32);
@@ -110,6 +116,11 @@ class Binding {
   final _register_dart dartio_uring_register;
   final _enter_dart dartio_uring_enter;
   final _socket_dart dartio_socket;
+  final _bind_dart dartio_bind;
+  final _name_dart dartio_getsockname;
+  final _name_dart dartio_getpeername;
+  final _listen_dart dartio_listen;
+
   final _strerror_dart strerror;
   final _strerror_dart sterrorname_np;
   final _umask_dart umask;
@@ -129,6 +140,18 @@ class Binding {
                 isLeaf: _canUseIsLeaf),
         dartio_socket = library.lookupFunction<_socket_native, _socket_dart>(
             'dartio_socket',
+            isLeaf: _canUseIsLeaf),
+        dartio_bind = library.lookupFunction<_bind_native, _bind_dart>(
+            'dartio_bind',
+            isLeaf: _canUseIsLeaf),
+        dartio_getsockname = library.lookupFunction<_name_native, _name_dart>(
+            'dartio_getsockname',
+            isLeaf: _canUseIsLeaf),
+        dartio_getpeername = library.lookupFunction<_name_native, _name_dart>(
+            'dartio_getpeername',
+            isLeaf: _canUseIsLeaf),
+        dartio_listen = library.lookupFunction<_listen_native, _listen_dart>(
+            'dartio_listen',
             isLeaf: _canUseIsLeaf),
         strerror = library.lookupFunction<_strerror_native, _strerror_dart>(
             'strerror',

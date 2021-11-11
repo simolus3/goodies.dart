@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:io_uring/io_uring.dart';
 
-const _length = 150 * 1024 * 1024; // 150 MiB
+const _length = 16 * 1024 * 1024 * 1024; // 16 GiB
 
 Future<void> main() async {
   final ring = await IOUring.initialize();

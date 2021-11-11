@@ -78,7 +78,7 @@ extension on Stream<List<int>> {
     // noise.
     final buffer = StringBuffer();
     return transform(utf8.decoder).forEach(buffer.write).then((void _) {
-      log(buffer.toString());
+      if (buffer.isNotEmpty) log(buffer.toString());
     });
   }
 }

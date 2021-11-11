@@ -9,11 +9,6 @@ dependencies:
 
 dev_dependencies:
   build: ^2.1.1
-  build_runner: ^2.1.4
+  build_runner: ^2.1.5
   extra_pedantic: ^1.5.0
   scratch_space: ^1.0.1
-
-dependency_overrides:
-  build_runner:
-    # https://github.com/dart-lang/build/pull/3214
-    path: /home/simon/programming/build/build_runner

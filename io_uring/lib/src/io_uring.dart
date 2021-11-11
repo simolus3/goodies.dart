@@ -29,11 +29,15 @@ class IOUringImpl implements IOUring {
     _defaultMode = binding.umask(0);
     binding.umask(_defaultMode);
 
-//    createSharedBuffers();
+    try {
+      createSharedBuffers();
+    } on Exception {
+      // ignore
+    }
   }
 
   void createSharedBuffers(
-      {int bufferSize = 32 * 1024, int amountOfBuffers = 2}) {
+      {int bufferSize = 64 * 1024, int amountOfBuffers = 1}) {
     final totalSize = bufferSize * amountOfBuffers;
     final start = binding
         .mmap(nullptr.cast(), totalSize, PROT_READ | PROT_WRITE,
@@ -274,6 +278,42 @@ class IOUringImpl implements IOUring {
         ..fd = socketFd
         ..addr = sockaddr.address
         ..off = sockaddlen,
+      interpretResult: (v) => v,
+    );
+  }
+
+  Operation<int> accept(
+      int socketFd, Pointer<Void> sockaddr, Pointer<Uint32> length) {
+    return Operation(
+      create: (sqe) => sqe
+        ..op = IORING_OP.ACCEPT
+        ..fd = socketFd
+        ..addr = sockaddr.address
+        ..off = length.address, // off = addr2
+      interpretResult: (v) => v,
+    );
+  }
+
+  Operation<int> send(int socketFd, Pointer<Void> buf, int length, int flags) {
+    return Operation(
+      create: (sqe) => sqe
+        ..op = IORING_OP.SEND
+        ..fd = socketFd
+        ..addr = buf.address
+        ..len = length
+        ..flags = flags,
+      interpretResult: (v) => v,
+    );
+  }
+
+  Operation<int> recv(int socketFd, Pointer<Void> buf, int length, int flags) {
+    return Operation(
+      create: (sqe) => sqe
+        ..op = IORING_OP.RECV
+        ..fd = socketFd
+        ..addr = buf.address
+        ..len = length
+        ..flags = flags,
       interpretResult: (v) => v,
     );
   }

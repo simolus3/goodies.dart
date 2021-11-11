@@ -30,9 +30,16 @@ extension ResolveType on InternetAddressType {
 
 final _buffer = Uint8List(64).buffer;
 
-/// Converts a 16-bit [int] [i] into a big-endian format for networking.
-int htons(int i) {
-  final data = _buffer.asByteData();
-  data.setUint16(0, i, Endian.host);
-  return data.getInt16(0);
+extension ConvertEndiannes on int {
+  int to16BitBigEndian() {
+    final data = _buffer.asByteData();
+    data.setUint16(0, this, Endian.host);
+    return data.getUint16(0);
+  }
+
+  int to16BitHost() {
+    final data = _buffer.asByteData();
+    data.setUint16(0, this, Endian.big);
+    return data.getUint16(0, Endian.host);
+  }
 }

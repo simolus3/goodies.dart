@@ -136,6 +136,22 @@ int dartio_socket(int domain, int type, int protocol) {
   return return_errno(socket(domain, type, protocol));
 }
 
+int dartio_bind(int sockfd, const struct sockaddr *addr, uint32_t addlen) {
+  return return_errno(bind(sockfd, addr, addlen));
+}
+
+int dartio_getsockname(int sockfd, struct sockaddr *restrict addr, uint32_t *restrict addrlen) {
+  return return_errno(getsockname(sockfd, addr, addrlen));
+}
+
+int dartio_getpeername(int sockfd, struct sockaddr *restrict addr, uint32_t *restrict addrlen) {
+  return return_errno(getpeername(sockfd, addr, addrlen));
+}
+
+int dartio_listen(int sockfd, int backlog) {
+  return return_errno(listen(sockfd, backlog));
+}
+
 int dartio_uring_enter(int fd, unsigned int submitted, unsigned int min_complete, unsigned int flags) {
   return io_uring_enter(fd, submitted, min_complete, flags);
 }
