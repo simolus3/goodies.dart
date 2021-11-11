@@ -2,11 +2,7 @@ import 'dart:ffi';
 
 import 'dart:typed_data';
 
-class iovec extends Struct {
-  external Pointer<Void> iov_base;
-  @IntPtr()
-  external int iov_len;
-}
+import 'ring/binding.dart';
 
 class ManagedBuffer {
   final Pointer<iovec> buffer;

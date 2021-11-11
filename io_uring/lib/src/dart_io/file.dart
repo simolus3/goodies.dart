@@ -57,7 +57,7 @@ class RingBasedFile extends RingBasedFileSystemEntity implements File {
   }
 
   Future<FileStat> _statAndCheckFile() {
-    return stat().then((stat) {
+    return this.stat().then((stat) {
       if (stat.type != FileSystemEntityType.file) {
         throw FileSystemException('Not a file!', path);
       }
@@ -67,7 +67,7 @@ class RingBasedFile extends RingBasedFileSystemEntity implements File {
   }
 
   FileStat _statAndCheckFileSync() {
-    final stat = statSync();
+    final stat = this.statSync();
     if (stat.type != FileSystemEntityType.file) {
       throw FileSystemException('Not a file!', path);
     }

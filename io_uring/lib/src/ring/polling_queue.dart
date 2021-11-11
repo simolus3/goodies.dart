@@ -11,6 +11,7 @@ class PollingQueue {
   final Map<int, Completer<int>> _ongoingOperations = {};
   int _operationId = 0;
   int _pendingOperations = 0;
+  bool _closed = false;
 
   final Pointer<dart_io_ring> ringPtr;
   final dart_io_ring ring;
@@ -118,6 +119,10 @@ class PollingQueue {
   }
 
   int submitOnly(void Function(io_uring_sqe sqe) updates) {
+    if (_closed) {
+      throw StateError('Ring was closed already');
+    }
+
     final submissions = _submissions;
     final tail = submissions.tail.value;
 
@@ -175,6 +180,18 @@ class PollingQueue {
 
     _stopTimerIfNecessary();
     return result;
+  }
+
+  void close() {
+    _closed = true;
+    _timer?.cancel();
+    _pendingOperations = 0;
+    binding.dartio_close(ringPtr);
+
+    for (final pending in _ongoingOperations.values) {
+      pending.completeError(const CancelledException());
+    }
+    _ongoingOperations.clear();
   }
 }
 

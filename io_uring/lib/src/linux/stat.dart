@@ -48,7 +48,10 @@ class statx extends Struct {
   external int stx_mnt_id;
 }
 
-class _IoUringFileStat implements FileStat {
+// size of the `statx` in the Kernel, in bytes
+const int sizeofStatx = 256;
+
+class IoUringFileStat implements FileStat {
   @override
   final DateTime changed;
 
@@ -71,8 +74,16 @@ class _IoUringFileStat implements FileStat {
   @override
   final int size;
 
-  _IoUringFileStat(this.changed, this.modified, this.accessed, this.type,
+  IoUringFileStat(this.changed, this.modified, this.accessed, this.type,
       this.mode, this.size);
+
+  IoUringFileStat.notFound()
+      : changed = DateTime(0),
+        modified = DateTime(0),
+        accessed = DateTime(0),
+        type = FileSystemEntityType.notFound,
+        mode = 0,
+        size = 0;
 
   @override
   String toString() => """
@@ -127,7 +138,7 @@ extension StatToDart on statx {
         dartType = FileSystemEntityType.notFound;
     }
 
-    return _IoUringFileStat(
+    return IoUringFileStat(
       stx_ctime.toDateTime(),
       stx_mtime.toDateTime(),
       stx_atime.toDateTime(),

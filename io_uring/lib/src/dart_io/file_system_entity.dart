@@ -1,7 +1,9 @@
 import 'dart:io';
 
+import '' as self;
 import '../io_uring.dart';
-
+import '../linux/errors.dart';
+import '../linux/stat.dart';
 import 'directory.dart';
 import 'file.dart';
 import 'link.dart';
@@ -30,6 +32,24 @@ RingBasedFileSystemEntity wrap(IOUringImpl ring, FileSystemEntity ioEntity) {
   throw AssertionError("Can't happen");
 }
 
+Future<FileStat> stat(IOUringImpl ring, String path, bool followLinks) {
+  return ring.run(ring.stat(path)).onError<FileSystemException>(
+      (error, stackTrace) => IoUringFileStat.notFound(),
+      test: (e) => e.osError?.errorCode == ENOENT);
+}
+
+FileStat statSync(IOUringImpl ring, String path, bool followLinks) {
+  try {
+    return ring.runSync(ring.stat(path, followLinks: followLinks));
+  } on FileSystemException catch (e) {
+    if (e.osError?.errorCode == ENOENT) {
+      return IoUringFileStat.notFound();
+    }
+
+    rethrow;
+  }
+}
+
 abstract class RingBasedFileSystemEntity implements FileSystemEntity {
   IOUringImpl get ring;
   FileSystemEntity get inner;
@@ -56,7 +76,7 @@ abstract class RingBasedFileSystemEntity implements FileSystemEntity {
 
   @override
   bool existsSync() {
-    return inner.existsSync();
+    return statSync().type == type;
   }
 
   @override
@@ -90,12 +110,12 @@ abstract class RingBasedFileSystemEntity implements FileSystemEntity {
 
   @override
   Future<FileStat> stat() {
-    return ring.run(ring.stat(path));
+    return self.stat(ring, path, false);
   }
 
   @override
   FileStat statSync() {
-    return ring.runSync(ring.stat(path));
+    return self.statSync(ring, path, false);
   }
 
   @override

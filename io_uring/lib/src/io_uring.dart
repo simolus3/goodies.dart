@@ -36,6 +36,16 @@ class IOUringImpl implements IOUring {
     }
   }
 
+  @override
+  Future<void> dispose() async {
+    queue.close();
+
+    for (final buffer in buffers.buffers) {
+      final ref = buffer.buffer.ref;
+      binding.munmap(ref.iov_base, ref.iov_len);
+    }
+  }
+
   void createSharedBuffers(
       {int bufferSize = 64 * 1024, int amountOfBuffers = 1}) {
     final totalSize = bufferSize * amountOfBuffers;
@@ -110,13 +120,13 @@ class IOUringImpl implements IOUring {
   Operation<void> nop() => const _Nop();
 
   Operation<FileStat> stat(String path, {bool followLinks = true}) {
-    final statResult = allocator<statx>(1);
+    final statResult = allocator.allocate<statx>(sizeofStatx);
     final name = path.toNativeUtf8(allocator: allocator);
 
     return Operation(
       create: (sqe) => sqe
         ..op = IORING_OP.STATX
-        ..fd = 0
+        ..fd = AT_FDCWD
         ..addr = name.cast().address
         ..x_flags = followLinks ? 0 : AT_SYMLINK_NOFOLLOW
         ..len = 0x000007ff // STATX_BASIC_STATS

@@ -45,6 +45,7 @@ struct dart_io_ring {
   int fd;
   struct dart_io_ring_submit submissions;
   struct dart_io_ring_complete completions;
+  struct iovec mapped[2];
 };
 
 static int io_uring_setup(uint32_t entries, struct io_uring_params *p) {
@@ -86,14 +87,17 @@ struct dart_io_ring* dartio_uring_setup(char **errorOut) {
   // indirection array (sq_entries * sizeof(unsigned int)). As the array is
   // located at the end of the structure, we add sq_off.array to also include
   // everything before.
+  size_t submissionLength = p.sq_off.array + p.sq_entries * sizeof(unsigned int);
   void *submissionPointer =
-      mmap(0, p.sq_off.array + p.sq_entries * sizeof(unsigned int),
+      mmap(0, submissionLength,
            PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, result,
            IORING_OFF_SQ_RING);
   if (submissionPointer == MAP_FAILED) {
       *errorOut = "Could not map submission data";
       return NULL;
   }
+  ring->mapped[0].iov_base = submissionPointer;
+  ring->mapped[1].iov_len = submissionLength;
 
   struct dart_io_ring_submit *submissions = &ring->submissions;
   submissions->head = submissionPointer + p.sq_off.head;
@@ -113,14 +117,17 @@ struct dart_io_ring* dartio_uring_setup(char **errorOut) {
   }
 
   // Map in the completion queue ring buffer
+  size_t completionLength = p.cq_off.cqes + p.cq_entries * sizeof(struct io_uring_cqe);
   void *completionPointer =
-      mmap(0, p.cq_off.cqes + p.cq_entries * sizeof(struct io_uring_cqe),
+      mmap(0, completionLength,
            PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, result,
            IORING_OFF_CQ_RING);
   if (completionPointer == MAP_FAILED) {
       *errorOut = "Could not map completion ring";
       return NULL;
   }
+  ring->mapped[1].iov_base = completionPointer;
+  ring->mapped[1].iov_len = completionLength;
 
   struct dart_io_ring_complete *completions = &ring->completions;
   completions->head = completionPointer + p.cq_off.head;
@@ -130,6 +137,13 @@ struct dart_io_ring* dartio_uring_setup(char **errorOut) {
   completions->cqes = completionPointer + p.cq_off.cqes;
 
   return ring;
+}
+
+void dartio_close(struct dart_io_ring* ring) {
+  munmap(ring->mapped[0].iov_base, ring->mapped[0].iov_len);
+  munmap(ring->mapped[1].iov_base, ring->mapped[1].iov_len);
+  close(ring->fd);
+  free(ring);
 }
 
 int dartio_socket(int domain, int type, int protocol) {

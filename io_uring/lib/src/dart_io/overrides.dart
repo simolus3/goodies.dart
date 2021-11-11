@@ -3,6 +3,7 @@ import 'dart:io';
 import '../../io_uring.dart';
 import '../io_uring.dart';
 import 'file_system_entity.dart';
+import 'file_system_entity.dart' as fse;
 import 'socket.dart';
 
 T runWithIOUring<T>(T Function() body, IOUring uring) {
@@ -17,24 +18,24 @@ class _RingOverrides extends IOOverrides {
   _RingOverrides(this.ring);
 
   @override
-  Future<FileStat> stat(String path) {
-    return ring.run(ring.stat(path, followLinks: false));
+  Future<FileStat> stat(String path, {bool followLinks = false}) {
+    return fse.stat(ring, path, followLinks);
   }
 
   @override
-  FileStat statSync(String path) {
-    return ring.runSync(ring.stat(path, followLinks: false));
+  FileStat statSync(String path, {bool followLinks = false}) {
+    return fse.statSync(ring, path, followLinks);
   }
 
   @override
   Future<FileSystemEntityType> fseGetType(String path, bool followLinks) async {
-    final stat = await ring.run(ring.stat(path, followLinks: followLinks));
-    return stat.type;
+    final result = await stat(path, followLinks: followLinks);
+    return result.type;
   }
 
   @override
   FileSystemEntityType fseGetTypeSync(String path, bool followLinks) {
-    return ring.runSync(ring.stat(path, followLinks: followLinks)).type;
+    return statSync(path, followLinks: followLinks).type;
   }
 
   @override
@@ -51,14 +52,6 @@ class _RingOverrides extends IOOverrides {
   Link createLink(String path) {
     return wrapLink(ring, ring.escape(() => Link(path)));
   }
-
-  @override
-  Stream<FileSystemEvent> fsWatch(String path, int events, bool recursive) {
-    throw UnimplementedError();
-  }
-
-  @override
-  bool fsWatchIsSupported() => true;
 
   @override
   Future<Socket> socketConnect(dynamic host, int port,

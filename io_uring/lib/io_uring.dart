@@ -1,5 +1,3 @@
-export 'src/dart_io/overrides.dart';
-
 import 'dart:ffi';
 import 'dart:isolate';
 
@@ -9,8 +7,12 @@ import 'src/io_uring.dart';
 import 'src/ring/binding.dart';
 import 'src/ring/polling_queue.dart';
 
-class IOUring {
+export 'src/dart_io/overrides.dart';
+
+abstract class IOUring {
   IOUring._();
+
+  Future<void> dispose();
 
   static Future<IOUring> initialize(
       {DynamicLibrary? helper, Allocator alloc = malloc}) async {

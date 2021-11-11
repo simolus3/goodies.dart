@@ -44,7 +44,7 @@ class _IORingManagedSocket {
 
         break;
       default:
-        throw ArgumentError('Unsupported address $this');
+        throw ArgumentError('Unsupported address $addr');
     }
 
     return _AddressAndLength(sockaddr, sockaddrlen);
@@ -258,7 +258,7 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
   void _startListening() {
     if (_currentRead == null) {
       final task = socket.ring.runCancellable(
-          socket.ring.read(socket.fd, _receiveBuffer, sizeOfReceive));
+          socket.ring.recv(socket.fd, _receiveBuffer.cast(), sizeOfReceive, 0));
       _currentRead = task;
 
       void finishedReading() {
@@ -329,6 +329,7 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
         _startWriting();
       } else {
         _flushCompleter?.complete();
+        _flushCompleter = null;
       }
     }, onError: (Object error, StackTrace trace) {
       writeFinished();
@@ -451,14 +452,13 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
   @override
   StreamSubscription<Uint8List> listen(void Function(Uint8List event)? onData,
       {Function? onError, void Function()? onDone, bool? cancelOnError}) {
-    // TODO: implement listen
-    throw UnimplementedError();
+    return _events.stream.listen(onData,
+        onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   }
 
   @override
   bool setOption(SocketOption option, bool enabled) {
-    // TODO: implement setOption
-    throw UnimplementedError();
+    return false; // todo: implement setOption
   }
 
   @override
@@ -557,8 +557,15 @@ class RingBasedServerSocket extends Stream<Socket> implements ServerSocket {
             RingBasedSocket(_IORingManagedSocket(fd, socket.ring));
         controller.add(connectedSocket);
 
-        if (controller.hasListener) {
+        if (controller.hasListener && !controller.isPaused) {
           // Start another round!
+          _startOrResume();
+        }
+      }, onError: (Object error, StackTrace trace) {
+        _currentAcceptTask = null;
+        controller.addError(error, trace);
+
+        if (controller.hasListener && !controller.isPaused) {
           _startOrResume();
         }
       });
