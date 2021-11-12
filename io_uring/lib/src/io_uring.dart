@@ -108,7 +108,7 @@ class IOUringImpl implements IOUring {
 
   T runSync<T>(Operation<T> op) {
     try {
-      final id = queue.submitOnly(op.create);
+      final id = queue.submitOnly(op.create, waitFor: 1);
       final result = queue.waitForEvent(id)
         ..throwIfError(binding, op.failureDescription ?? '', op.path);
       return op.interpretResult(result);

@@ -21,6 +21,10 @@ const O_NOCTTY = 0x100;
 const O_TRUNC = 0x200;
 const O_APPEND = 0x400;
 
+const SEEK_SET = 0;
+const SEEK_CUR = 1;
+const SEEK_END = 2;
+
 // https://elixir.bootlin.com/linux/v5.15-rc7/source/include/uapi/linux/openat2.h#L26
 const RESOLVE_NO_XDEV = 0x01;
 const RESOLVE_NO_MAGICLINKS = 0x02;

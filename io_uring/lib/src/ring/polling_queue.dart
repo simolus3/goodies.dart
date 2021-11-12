@@ -142,7 +142,7 @@ class PollingQueue {
     return completer.future;
   }
 
-  int submitOnly(void Function(io_uring_sqe sqe) updates) {
+  int submitOnly(void Function(io_uring_sqe sqe) updates, {int waitFor = 0}) {
     if (_closed) {
       throw StateError('Ring was closed already');
     }
@@ -167,7 +167,7 @@ class PollingQueue {
 
     // Submit the event to the Kernel!
     submissions.tail.value = tail + 1;
-    final result = binding.dartio_uring_enter(ring.fd, 1, 0, 0);
+    final result = binding.dartio_uring_enter(ring.fd, 1, waitFor, 0);
 
     if (result < 0) {
       throw IOUringException('Could not add entry to submission queue');

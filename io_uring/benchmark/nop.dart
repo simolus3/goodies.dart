@@ -7,7 +7,7 @@ Future<void> main() async {
   final ring = await IOUring.initialize() as IOUringImpl;
 
   _testSync(ring);
-  // await _testAsync(ring);
+  await _testAsync(ring);
 }
 
 void _testSync(IOUringImpl ring) {

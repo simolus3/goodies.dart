@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -162,8 +160,24 @@ int dartio_getpeername(int sockfd, struct sockaddr *restrict addr, uint32_t *res
   return return_errno(getpeername(sockfd, addr, addrlen));
 }
 
+int dartio_getsockopt(int sockfd, int level, int optname, void *restrict optval, uint32_t *restrict optlen) {
+  return return_errno(getsockopt(sockfd, level, optname, optval, optlen));
+}
+
+int dartio_setsockopt(int sockfd, int level, int optname, const void *optval, uint32_t optlen) {
+  return return_errno(setsockopt(sockfd, level, optname, optval, optlen));
+}
+
 int dartio_listen(int sockfd, int backlog) {
   return return_errno(listen(sockfd, backlog));
+}
+
+long int dartio_lseek(int fd, long int offset, int whence) {
+  return return_errno(lseek(fd, offset, whence));
+}
+
+int dartio_ftruncate(int fd, long int length) {
+  return return_errno(ftruncate(fd, length));
 }
 
 int dartio_uring_enter(int fd, unsigned int submitted, unsigned int min_complete, unsigned int flags) {

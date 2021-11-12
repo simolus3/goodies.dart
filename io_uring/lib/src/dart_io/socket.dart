@@ -41,7 +41,21 @@ class _IORingManagedSocket {
           ..port = port.to16BitBigEndian();
         sockaddr = ptr.cast();
         sockaddrlen = sizeOf<_sockaddr_in>();
+        break;
+      case InternetAddressType.IPv6:
+        final ptr = ring.allocator<_sockaddr_in6>(1);
+        ring.binding.memset(ptr.cast(), 0, sizeOf<_sockaddr_in6>());
 
+        final ref = ptr.ref
+          ..family = AF_INET6
+          ..port = port.to16BitBigEndian();
+
+        for (var i = 0; i < 16; i++) {
+          ref.addr[i] = addr.rawAddress[i];
+        }
+
+        sockaddr = ptr.cast();
+        sockaddrlen = sizeOf<_sockaddr_in6>();
         break;
       default:
         throw ArgumentError('Unsupported address $addr');
@@ -445,8 +459,30 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
 
   @override
   Uint8List getRawOption(RawSocketOption option) {
-    // TODO: implement getRawOption
-    throw UnimplementedError();
+    final ring = socket.ring;
+
+    final lengthPtr = ring.allocator<Uint32>()..value = option.value.length;
+    final data = ring.allocator<Uint8>(option.value.length);
+
+    try {
+      ring.binding
+          .dartio_getsockopt(
+            socket.fd,
+            option.level,
+            option.option,
+            data,
+            lengthPtr,
+          )
+          .throwIfError(ring.binding);
+
+      final value = Uint8List.fromList(data.asTypedList(lengthPtr.value));
+      option.value.setAll(0, data.asTypedList(option.value.length));
+      return value;
+    } finally {
+      ring.allocator
+        ..free(lengthPtr)
+        ..free(data);
+    }
   }
 
   @override
@@ -458,12 +494,31 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
 
   @override
   bool setOption(SocketOption option, bool enabled) {
+    if (option == SocketOption.tcpNoDelay) {
+      // TCP_NODELAY = 1
+      setRawOption(RawSocketOption.fromBool(RawSocketOption.levelTcp, 1, true));
+    }
     return false; // todo: implement setOption
   }
 
   @override
   void setRawOption(RawSocketOption option) {
-    // TODO: implement setRawOption
+    final ring = socket.ring;
+
+    final lengthPtr = ring.allocator<Uint32>()..value = option.value.length;
+    final data = ring.allocator<Uint8>(option.value.length)
+      ..asTypedList(option.value.length).setAll(0, option.value);
+
+    try {
+      ring.binding
+          .dartio_setsockopt(
+              socket.fd, option.level, option.option, data, lengthPtr)
+          .throwIfError(ring.binding);
+    } finally {
+      ring.allocator
+        ..free(lengthPtr)
+        ..free(data);
+    }
   }
 
   @override
@@ -615,6 +670,23 @@ class _sockaddr_in extends Struct {
   external Array<Uint8> padding;
 }
 
+class _sockaddr_in6 extends Struct {
+  @Uint16()
+  external int family;
+
+  @Uint16()
+  external int port;
+
+  @Uint32()
+  external int flow;
+
+  @Array(16)
+  external Array<Uint8> addr;
+
+  @Uint32()
+  external int scope;
+}
+
 class _AddressAndLength {
   final Pointer<Void> address;
   final int addressLength;
@@ -639,7 +711,14 @@ class _DartAddressAndPort {
         final inetAddress = InternetAddress.fromRawAddress(rawAddress);
         return _DartAddressAndPort(inetAddress, data.port.to16BitHost());
       case AF_INET6:
-        break;
+        final data = address.cast<_sockaddr_in6>().ref;
+        final rawAddress = Uint8List(16);
+        for (var i = 0; i < 16; i++) {
+          rawAddress[i] = data.addr[i];
+        }
+
+        final inetAddress = InternetAddress.fromRawAddress(rawAddress);
+        return _DartAddressAndPort(inetAddress, data.port.to16BitHost());
       case AF_UNIX:
         break;
     }

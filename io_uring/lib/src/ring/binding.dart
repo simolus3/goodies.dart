@@ -107,6 +107,16 @@ typedef _close_native = Void Function(Pointer<dart_io_ring>);
 typedef _close_dart = void Function(Pointer<dart_io_ring>);
 typedef _listen_native = Int32 Function(Int32, Int32);
 typedef _listen_dart = int Function(int, int);
+typedef _getsockopt_native = Int32 Function(
+    Int32, Int32, Int32, Pointer, Pointer);
+typedef _getsockopt_dart = int Function(int, int, int, Pointer, Pointer);
+typedef _setsockopt_native = Int32 Function(
+    Int32, Int32, Int32, Pointer, Pointer);
+typedef _setsockopt_dart = int Function(int, int, int, Pointer, Pointer);
+typedef _lseek_native = Int64 Function(Int32, Int64, Int32);
+typedef _lseek_dart = int Function(int, int, int);
+typedef _ftruncate_native = Int32 Function(Int32, Int64);
+typedef _ftruncate_dart = int Function(int, int);
 typedef _strerror_native = Pointer<Utf8> Function(Int32);
 typedef _strerror_dart = Pointer<Utf8> Function(int);
 typedef _umask_native = Uint32 Function(Uint32);
@@ -134,6 +144,10 @@ class Binding {
   final _name_dart dartio_getsockname;
   final _name_dart dartio_getpeername;
   final _listen_dart dartio_listen;
+  final _getsockopt_dart dartio_getsockopt;
+  final _setsockopt_dart dartio_setsockopt;
+  final _lseek_dart dartio_lseek;
+  final _ftruncate_dart dartio_ftruncate;
 
   final _strerror_dart strerror;
   final _strerror_dart sterrorname_np;
@@ -171,6 +185,21 @@ class Binding {
         dartio_listen = library.lookupFunction<_listen_native, _listen_dart>(
             'dartio_listen',
             isLeaf: _canUseIsLeaf),
+        dartio_getsockopt =
+            library.lookupFunction<_getsockopt_native, _getsockopt_dart>(
+                'dartio_getsockopt',
+                isLeaf: _canUseIsLeaf),
+        dartio_setsockopt =
+            library.lookupFunction<_setsockopt_native, _setsockopt_dart>(
+                'dartio_setsockopt',
+                isLeaf: _canUseIsLeaf),
+        dartio_lseek = library.lookupFunction<_lseek_native, _lseek_dart>(
+            'dartio_lseek',
+            isLeaf: _canUseIsLeaf),
+        dartio_ftruncate =
+            library.lookupFunction<_ftruncate_native, _ftruncate_dart>(
+                'dartio_ftruncate',
+                isLeaf: _canUseIsLeaf),
         strerror = library.lookupFunction<_strerror_native, _strerror_dart>(
             'strerror',
             isLeaf: _canUseIsLeaf),

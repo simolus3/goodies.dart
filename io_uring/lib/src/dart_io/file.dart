@@ -328,9 +328,8 @@ class RingBasedFile extends RingBasedFileSystemEntity implements File {
   }
 
   @override
-  Future setLastAccessed(DateTime time) {
-    // TODO: implement setLastAccessed
-    throw UnimplementedError();
+  Future<void> setLastAccessed(DateTime time) {
+    return inner.setLastAccessed(time);
   }
 
   @override
@@ -339,14 +338,13 @@ class RingBasedFile extends RingBasedFileSystemEntity implements File {
   }
 
   @override
-  Future setLastModified(DateTime time) {
-    // TODO: implement setLastModified
-    throw UnimplementedError();
+  Future<void> setLastModified(DateTime time) {
+    return inner.setLastModified(time);
   }
 
   @override
   void setLastModifiedSync(DateTime time) {
-    // TODO: implement setLastModifiedSync
+    inner.setLastModifiedSync(time);
   }
 
   @override
@@ -456,27 +454,33 @@ class _OpenedFile extends RandomAccessFile {
 
   @override
   Future<int> length() {
-    // TODO: implement length
-    throw UnimplementedError();
+    return Future.value(lengthSync());
   }
 
   @override
   int lengthSync() {
-    // TODO: implement lengthSync
-    throw UnimplementedError();
+    final offset = positionSync();
+    final endOffset = uring.binding.dartio_lseek(fd, 0, SEEK_END)
+      ..throwIfError(uring.binding);
+    uring.binding
+        .dartio_lseek(fd, offset, SEEK_SET)
+        .throwIfError(uring.binding);
+
+    return endOffset;
   }
 
   @override
   Future<RandomAccessFile> lock(
       [FileLock mode = FileLock.exclusive, int start = 0, int end = -1]) {
-    // TODO: implement lock
-    throw UnimplementedError();
+    throw UnimplementedError(
+        'lock is not currently implemented under io_uring');
   }
 
   @override
   void lockSync(
       [FileLock mode = FileLock.exclusive, int start = 0, int end = -1]) {
-    // TODO: implement lockSync
+    throw UnimplementedError(
+        'lockSync is not currently implemented under io_uring');
   }
 
   @override
@@ -484,14 +488,13 @@ class _OpenedFile extends RandomAccessFile {
 
   @override
   Future<int> position() {
-    // TODO: implement position
-    throw UnimplementedError();
+    return Future.value(positionSync());
   }
 
   @override
   int positionSync() {
-    // TODO: implement positionSync
-    throw UnimplementedError();
+    return uring.binding.dartio_lseek(fd, 0, SEEK_CUR)
+      ..throwIfError(uring.binding);
   }
 
   @override
@@ -582,35 +585,38 @@ class _OpenedFile extends RandomAccessFile {
 
   @override
   Future<_OpenedFile> setPosition(int position) {
-    // TODO: implement setPosition
-    throw UnimplementedError();
+    setPosition(position);
+    return Future.value(this);
   }
 
   @override
   void setPositionSync(int position) {
-    // TODO: implement setPositionSync
+    uring.binding
+        .dartio_lseek(fd, position, SEEK_SET)
+        .throwIfError(uring.binding);
   }
 
   @override
   Future<RandomAccessFile> truncate(int length) {
-    // TODO: implement truncate
-    throw UnimplementedError();
+    truncateSync(length);
+    return Future.value(this);
   }
 
   @override
   void truncateSync(int length) {
-    // TODO: implement truncateSync
+    uring.binding.dartio_ftruncate(fd, length).throwIfError(uring.binding);
   }
 
   @override
   Future<RandomAccessFile> unlock([int start = 0, int end = -1]) {
-    // TODO: implement unlock
-    throw UnimplementedError();
+    throw UnimplementedError(
+        'unlock is not currently supported under io_uring');
   }
 
   @override
   void unlockSync([int start = 0, int end = -1]) {
-    // TODO: implement unlockSync
+    throw UnimplementedError(
+        'unlockSsync is not currently supported under io_uring');
   }
 
   @override
