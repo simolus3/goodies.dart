@@ -57,6 +57,24 @@ class _IORingManagedSocket {
         sockaddr = ptr.cast();
         sockaddrlen = sizeOf<_sockaddr_in6>();
         break;
+      case InternetAddressType.unix:
+        final ptr = ring.allocator<_sockaddr_un>(1);
+        ring.binding.memset(ptr.cast(), 0, sizeOf<_sockaddr_un>());
+
+        final pathBytes = addr.rawAddress;
+        if (pathBytes.length > 107) {
+          throw ArgumentError.value(addr, 'addr',
+              'Unix addresses must have a length shorter than 108 bytes.');
+        }
+
+        final ref = ptr.ref..family = AF_UNIX;
+        for (var i = 0; i < pathBytes.length; i++) {
+          ref.path[i] = pathBytes[i];
+        }
+
+        sockaddr = ptr.cast();
+        sockaddrlen = sizeOf<_sockaddr_un>();
+        break;
       default:
         throw ArgumentError('Unsupported address $addr');
     }
@@ -687,6 +705,13 @@ class _sockaddr_in6 extends Struct {
   external int scope;
 }
 
+class _sockaddr_un extends Struct {
+  @Uint16()
+  external int family;
+  @Array(108)
+  external Array<Uint8> path;
+}
+
 class _AddressAndLength {
   final Pointer<Void> address;
   final int addressLength;
@@ -720,7 +745,17 @@ class _DartAddressAndPort {
         final inetAddress = InternetAddress.fromRawAddress(rawAddress);
         return _DartAddressAndPort(inetAddress, data.port.to16BitHost());
       case AF_UNIX:
-        break;
+        final data = address.cast<_sockaddr_un>().ref;
+        final rawPath = Uint8List(108);
+        for (var i = 0; i < 108; i++) {
+          final code = data.path[i];
+          if (code == 0) break; // Path is zero-terminated
+          rawPath[i] = code;
+        }
+
+        final inetAddress = InternetAddress.fromRawAddress(rawPath,
+            type: InternetAddressType.unix);
+        return _DartAddressAndPort(inetAddress, -1);
     }
 
     throw ArgumentError('Unsupported native address');
