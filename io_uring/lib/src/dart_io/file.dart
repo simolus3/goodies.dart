@@ -636,8 +636,10 @@ class _OpenedFile extends RandomAccessFile {
       var totalBytesWritten = 0;
 
       while (totalBytesWritten < length) {
-        totalBytesWritten += await uring.run(
-            uring.write(fd, nativeBuffer.elementAt(totalBytesWritten), length));
+        totalBytesWritten += await uring.run(uring.write(
+            fd,
+            nativeBuffer.elementAt(totalBytesWritten),
+            length - totalBytesWritten));
       }
 
       return this;
@@ -657,8 +659,10 @@ class _OpenedFile extends RandomAccessFile {
       var totalBytesWritten = 0;
 
       while (totalBytesWritten < length) {
-        totalBytesWritten += uring.runSync(
-            uring.write(fd, nativeBuffer.elementAt(totalBytesWritten), length));
+        totalBytesWritten += uring.runSync(uring.write(
+            fd,
+            nativeBuffer.elementAt(totalBytesWritten),
+            length - totalBytesWritten));
       }
     } finally {
       uring.allocator.free(nativeBuffer);

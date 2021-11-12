@@ -7,11 +7,11 @@ const _runs = 100000;
 Future<void> main() async {
   final ring = await IOUring.initialize();
 
-  await _testAsync('dart:io');
-  await runWithIOUring(() => _testAsync('io_uring'), ring);
-
   _testSync('dart_io');
   runWithIOUring(() => _testSync('io_uring'), ring);
+
+  await _testAsync('dart:io');
+  await runWithIOUring(() => _testAsync('io_uring'), ring);
 }
 
 Future<void> _testAsync(String mode) async {

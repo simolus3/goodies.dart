@@ -12,6 +12,8 @@ class PollingQueue {
   int _operationId = 0;
   int _pendingOperations = 0;
   bool _closed = false;
+  bool _addedTaskDuringFetch = false;
+  bool _startedSynchronousPollDuringFetch = false;
 
   final Pointer<dart_io_ring> ringPtr;
   final dart_io_ring ring;
@@ -46,8 +48,7 @@ class PollingQueue {
   }
 
   PollingQueue._(this.binding, this.ringPtr, this.ring)
-      // Reading structs is somehow expensive, so let's only do that once if we
-      // can...
+      // Reading structs is somehow expensive, so let's only do that once
       : _submissions = ring.submissions,
         _completions = ring.completions;
 
@@ -67,22 +68,38 @@ class PollingQueue {
   }
 
   void _fetch() {
+    _addedTaskDuringFetch = false;
+    _startedSynchronousPollDuringFetch = false;
+
     final completions = ring.completions;
     final originalHead = completions.head.value;
     var head = originalHead;
+    final ringMask = completions.ring_mask.value;
+    var processed = 0;
 
-    try {
-      // We're on a ring buffer, so if head == tail we caught up.
-      while (head != completions.tail.value) {
-        final cqe = completions.cqes[head & completions.ring_mask.value];
-        _pendingOperations--;
-        _ongoingOperations.remove(cqe.user_data)!.complete(cqe.res);
+    // We're on a ring buffer, so if head == tail we caught up.
+    while (head != completions.tail.value) {
+      final cqe = completions.cqes[head & ringMask];
+      _pendingOperations--;
+      assert(_ongoingOperations.containsKey(cqe.user_data),
+          'Unexpected cqe ${cqe.user_data}');
 
-        head++;
+      head++;
+      ring.completions.head.value = head;
+
+      final FutureOr<int> value;
+      if (_addedTaskDuringFetch) {
+        value = Future.value(cqe.res);
+      } else {
+        value = cqe.res;
       }
-    } finally {
-      if (originalHead != head) {
-        ring.completions.head.value = head;
+      _ongoingOperations.remove(cqe.user_data)!.complete(value);
+
+      processed++;
+      if (processed == 100 || _startedSynchronousPollDuringFetch) {
+        // We don't want to process too many events in one iteration, we're
+        // completing synchronously and this blocks up the event queue.
+        break;
       }
     }
 
@@ -110,9 +127,16 @@ class PollingQueue {
   /// Returns a future that completes when the request with the id [id] has
   /// completed.
   ///
-  /// This should be called immediately after registering the request.
+  /// This should be called synchronously after submitting the entry.
   Future<int> completion(int id) {
-    final completer = _ongoingOperations[id] = Completer();
+    // We _really_ want to be using synchronous primitives where possible, the
+    // overhead of async operations dominates benchmarks.
+    // We make sure that this future does not complete synchronously by:
+    //  - using a timer to fetch events, or completing asynchronously in
+    //   [waitForEvent]
+    //  - stopping a timer run if completing a future synchronously adds a new
+    //    completer.
+    final completer = _ongoingOperations[id] = Completer.sync();
     _pendingOperations++;
     _startTimerIfNecessary();
     return completer.future;
@@ -135,6 +159,12 @@ class PollingQueue {
     updates(sqe);
     final id = sqe.userData = _operationId++;
 
+    // Since we're using synchronous completers, we may add a new task
+    // synchronously while processing a completion event. That's fine, but we
+    // should then stop handing out completions synchronously to make sure that
+    // this event doesn't complete synchronously after being added.
+    _addedTaskDuringFetch = true;
+
     // Submit the event to the Kernel!
     submissions.tail.value = tail + 1;
     final result = binding.dartio_uring_enter(ring.fd, 1, 0, 0);
@@ -147,6 +177,7 @@ class PollingQueue {
   }
 
   int waitForEvent(int id) {
+    _startedSynchronousPollDuringFetch = true;
     final completions = _completions;
     final originalHead = completions.head.value;
     var head = originalHead;
@@ -168,9 +199,14 @@ class PollingQueue {
         break;
       } else if (_ongoingOperations.containsKey(cqe.user_data)) {
         _pendingOperations--;
-        _ongoingOperations.remove(cqe.user_data)!.complete(cqe.res);
+        // waitForEvent is called synchronously and we're using sync completers,
+        // so let's add an async delay here to ensure our Future's behave well.
+        _ongoingOperations
+            .remove(cqe.user_data)!
+            .complete(Future.value(cqe.res));
       } else {
-        throw AssertionError('Unexpected completion event: ${cqe.user_data}');
+        throw AssertionError('Unexpected completion event: ${cqe.user_data} '
+            'while waiting for $id');
       }
     }
 
