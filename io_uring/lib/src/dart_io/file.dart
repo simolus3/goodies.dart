@@ -9,6 +9,7 @@ import '../buffers.dart';
 import '../io_uring.dart';
 import '../linux/errors.dart';
 import '../linux/file.dart';
+import '../utils.dart';
 import 'file_system_entity.dart';
 
 class RingBasedFile extends RingBasedFileSystemEntity implements File {
@@ -637,7 +638,8 @@ class _OpenedFile extends RandomAccessFile {
     final effectiveEnd = end ?? buffer.length;
     final length = effectiveEnd - start;
 
-    final nativeBuffer = uring.allocator.allocate<Uint8>(length);
+    final nativeBuffer =
+        uring.allocator.allocateBytes(buffer, start, effectiveEnd);
     try {
       var totalBytesWritten = 0;
 
@@ -660,7 +662,8 @@ class _OpenedFile extends RandomAccessFile {
     final effectiveEnd = end ?? buffer.length;
     final length = effectiveEnd - start;
 
-    final nativeBuffer = uring.allocator.allocate<Uint8>(length);
+    final nativeBuffer =
+        uring.allocator.allocateBytes(buffer, start, effectiveEnd);
     try {
       var totalBytesWritten = 0;
 
