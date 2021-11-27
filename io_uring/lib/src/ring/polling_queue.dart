@@ -4,7 +4,11 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
+import '../utils.dart';
 import 'binding.dart';
+
+const bool _traceOperations =
+    bool.fromEnvironment('io_uring.trace', defaultValue: false);
 
 class PollingQueue {
   final Binding binding;
@@ -54,6 +58,10 @@ class PollingQueue {
 
   void _startTimerIfNecessary() {
     if (_pendingOperations > 0 && _timer == null) {
+      if (_traceOperations) {
+        print('Starting fetch timer');
+      }
+
       _timer = Timer.periodic(Duration.zero, (timer) {
         _fetch();
       });
@@ -62,6 +70,9 @@ class PollingQueue {
 
   void _stopTimerIfNecessary() {
     if (_pendingOperations == 0) {
+      if (_traceOperations) {
+        print('Stopping fetch timer');
+      }
       _timer?.cancel();
       _timer = null;
     }
@@ -80,9 +91,6 @@ class PollingQueue {
     // We're on a ring buffer, so if head == tail we caught up.
     while (head != completions.tail.value) {
       final cqe = completions.cqes[head & ringMask];
-      _pendingOperations--;
-      assert(_ongoingOperations.containsKey(cqe.user_data),
-          'Unexpected cqe ${cqe.user_data}');
 
       head++;
       ring.completions.head.value = head;
@@ -93,7 +101,17 @@ class PollingQueue {
       } else {
         value = cqe.res;
       }
-      _ongoingOperations.remove(cqe.user_data)!.complete(value);
+
+      final operation = _ongoingOperations.remove(cqe.user_data);
+      if (_traceOperations) {
+        print('completing ${cqe.user_data} with ${cqe.res}, '
+            'matched operation is $operation');
+      }
+
+      if (operation != null) {
+        _pendingOperations--;
+        operation.complete(value);
+      }
 
       processed++;
       if (processed == 100 || _startedSynchronousPollDuringFetch) {
@@ -112,16 +130,25 @@ class PollingQueue {
   }
 
   void cancel(int id) {
-    submitOnly((sqe) => sqe
+    if (_traceOperations) {
+      print('cancelling $id');
+    }
+
+    final cancelId = submitOnly((sqe) => sqe
       ..op = IORING_OP.ASYNC_CANCEL
       ..addr = id);
 
-    final pending = _ongoingOperations.remove(id);
-    if (pending != null) {
-      pending.completeError(const CancelledException());
-      _pendingOperations--;
-      _stopTimerIfNecessary();
-    }
+    completion(cancelId).then((cancelResult) {
+      // If not -ENOENT, a cancellation was attempted.
+      if (cancelResult != -2) {
+        final pending = _ongoingOperations.remove(id);
+        if (pending != null) {
+          pending.completeError(const CancelledException());
+          _pendingOperations--;
+          _stopTimerIfNecessary();
+        }
+      }
+    });
   }
 
   /// Returns a future that completes when the request with the id [id] has
@@ -148,16 +175,29 @@ class PollingQueue {
     }
 
     final submissions = _submissions;
+    final head = binding.dartio_load_atomic(submissions.head);
     final tail = submissions.tail.value;
+    final next = tail + 1;
+
+    if (next - head > submissions.entry_count.value) {
+      throw StateError('Submission queue is full');
+    }
 
     // Write the event into the right submission queue index
     final index = tail & submissions.ring_mask.value;
     final sqePtr = submissions.sqes.elementAt(index);
-    binding.memset(sqePtr.cast(), 0, sizeOf<io_uring_cqe>());
+
+    binding.memset(sqePtr.cast(), 0, sizeOf<io_uring_sqe>());
 
     final sqe = sqePtr.ref;
     updates(sqe);
     final id = sqe.userData = _operationId++;
+
+    if (_traceOperations) {
+      final op = sqe.op;
+      print('submit (head = $head, i = $index, op = $op, k = $head): 0x' +
+          bytesToHex(sqePtr, sizeOf<io_uring_sqe>()));
+    }
 
     // Since we're using synchronous completers, we may add a new task
     // synchronously while processing a completion event. That's fine, but we
@@ -165,8 +205,9 @@ class PollingQueue {
     // this event doesn't complete synchronously after being added.
     _addedTaskDuringFetch = true;
 
-    // Submit the event to the Kernel!
-    submissions.tail.value = tail + 1;
+    // Submit the event to the Kernel! Ensure that the kernel sees the SQE
+    // updates before it sees the tail update.
+    binding.dartio_store_atomic(submissions.tail, next);
     final result = binding.dartio_uring_enter(ring.fd, 1, waitFor, 0);
 
     if (result < 0) {
@@ -182,7 +223,7 @@ class PollingQueue {
     final originalHead = completions.head.value;
     var head = originalHead;
 
-    while (head == completions.tail.value) {
+    while (head == binding.dartio_load_atomic(completions.tail)) {
       // Synchronously wait for this to change (0 to submit, wait for 1)
       binding.dartio_uring_enter(ring.fd, 0, 1, 0);
     }
@@ -190,9 +231,15 @@ class PollingQueue {
     late int result;
 
     // We're on a ring buffer, so if head == tail we caught up.
-    while (head != completions.tail.value) {
-      final cqe = completions.cqes[head & completions.ring_mask.value];
+    while (head != binding.dartio_load_atomic(completions.tail)) {
+      final cqePtr =
+          completions.cqes.elementAt(head & completions.ring_mask.value);
+      final cqe = cqePtr.ref;
       head++;
+
+      if (_traceOperations) {
+        print('io_uring done: 0x' + bytesToHex(cqePtr, sizeOf<io_uring_cqe>()));
+      }
 
       if (cqe.user_data == id) {
         result = cqe.res;

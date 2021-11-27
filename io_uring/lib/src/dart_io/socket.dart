@@ -5,9 +5,11 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
+import '../buffers.dart';
 import '../io_uring.dart';
 import '../linux/socket.dart';
 import '../ring/polling_queue.dart';
+import '../utils.dart';
 
 class _IORingManagedSocket {
   final int fd;
@@ -150,13 +152,10 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
   final Completer<void> _writeClosed = Completer();
   ConnectionTask<void>? _currentWrite;
 
-  static const sizeOfReceive = 65536;
-  final Pointer<Uint8> _receiveBuffer;
-  ConnectionTask<void>? _currentRead;
-  final StreamController<Uint8List> _events = StreamController();
+  final _SocketReader _reader;
 
   RingBasedSocket(this.socket)
-      : _receiveBuffer = socket.ring.allocator(sizeOfReceive) {
+      : _reader = _SocketReader(socket.ring, socket.fd) {
     // When we get to this point, we have a fully connected socket so we can
     // query what it is bound to
     final ring = socket.ring;
@@ -183,12 +182,6 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
       ring.allocator.free(addressBuffer);
       ring.allocator.free(length);
     }
-
-    _events
-      ..onListen = _startListening
-      ..onResume = _startListening
-      ..onPause = _stopListening
-      ..onCancel = _stopListening;
   }
 
   static Future<ConnectionTask<Socket>> startConnect(
@@ -241,11 +234,20 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
           }
         },
         onError: (Object e, StackTrace s) {
-          tasks.remove(task);
+          if (!winningSocket.isCompleted) {
+            tasks.remove(task);
 
-          if (tasks.isEmpty && !winningSocket.isCompleted) {
-            // All operations failed, so report final failure
-            winningSocket.completeError(e, s);
+            if (tasks.isEmpty) {
+              // All operations failed, so report final failure
+              winningSocket.completeError(e, s);
+            }
+          }
+
+          if (e is CancelledException) {
+            // Another socket was done first, so close this one.
+            socket
+                ._close(forRead: true, forWrite: true)
+                .catchError((Object ignore) {});
           }
         },
       );
@@ -285,36 +287,6 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
     });
 
     return RingConnectionTask(done, cancel);
-  }
-
-  void _startListening() {
-    if (_currentRead == null) {
-      final task = socket.ring.runCancellable(
-          socket.ring.recv(socket.fd, _receiveBuffer.cast(), sizeOfReceive, 0));
-      _currentRead = task;
-
-      void finishedReading() {
-        _currentRead = null;
-        if (_events.hasListener && !_events.isPaused) {
-          _startListening();
-        }
-      }
-
-      task.socket.then((bytesRead) {
-        // Copy into a VM-managed buffer
-        final buffer =
-            Uint8List.fromList(_receiveBuffer.asTypedList(bytesRead));
-        _events.add(buffer);
-        finishedReading();
-      }, onError: (Object error, StackTrace trace) {
-        _events.addError(error, trace);
-        finishedReading();
-      });
-    }
-  }
-
-  void _stopListening() {
-    _currentRead?.cancel();
   }
 
   void _checkCanAdd() {
@@ -460,9 +432,7 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
   Future<void> destroy() async {
     await close();
 
-    _stopListening();
-    await _events.close();
-    socket.ring.allocator.free(_receiveBuffer);
+    _reader.close();
     await socket._close(forRead: true);
   }
 
@@ -506,7 +476,7 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
   @override
   StreamSubscription<Uint8List> listen(void Function(Uint8List event)? onData,
       {Function? onError, void Function()? onDone, bool? cancelOnError}) {
-    return _events.stream.listen(onData,
+    return _reader.listen(onData,
         onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   }
 
@@ -558,6 +528,26 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
   void writeln([Object? object = ""]) {
     write(object);
     writeCharCode(10); // LF
+  }
+}
+
+class _SocketReader extends IOStream<Uint8List> {
+  final int socketFd;
+
+  _SocketReader(IOUringImpl ring, this.socketFd) : super(ring);
+
+  @override
+  // todo: I think we can support fixed reads.
+  bool get supportsFixedReads => false;
+
+  @override
+  Operation<int> read(Pointer<Uint8> buffer, int length) {
+    return ring.recv(socketFd, buffer.cast(), length, 0);
+  }
+
+  @override
+  Operation<int> readFixed(ManagedBuffer buffer, int length) {
+    throw UnsupportedError('_SocketReader.readFixed');
   }
 }
 

@@ -158,76 +158,7 @@ class RingBasedFile extends RingBasedFileSystemEntity implements File {
     final controller = StreamController<List<int>>(sync: true);
 
     _OpenedFile? file;
-    ManagedBuffer? buffer;
-    var hasPendingOperation = false;
-    int? remaining = end == null ? null : end - (start ?? 0);
-
-    // Emit a chunk, and report whether more data is needed.
-    bool emit(Uint8List chunk) {
-      if (chunk.isEmpty) {
-        controller.close(); // EoF reached
-        return false;
-      } else {
-        controller.add(chunk);
-        if (remaining != null) {
-          remaining = remaining! - chunk.length;
-        }
-
-        if (remaining != null && remaining! <= 0) {
-          assert(remaining == 0, 'Wrote more data than expected');
-          controller.close();
-          return false;
-        } else {
-          // Fetch again if we have an active listener
-          return controller.hasListener && !controller.isPaused;
-        }
-      }
-    }
-
-    void readAndEmit() {
-      assert(!hasPendingOperation, 'Two reads at the same time, no good');
-      hasPendingOperation = true;
-
-      final currentBuffer = buffer;
-
-      if (currentBuffer != null) {
-        // We have a shared buffer with the Kernel, nice! Then we only need one
-        // copy into Dart.
-        var length = currentBuffer.buffer.ref.iov_len;
-        if (remaining != null) {
-          length = min(length, remaining!);
-        }
-
-        ring
-            .run(ring.readFixed(file!.fd, currentBuffer, length, path: path))
-            .then((bytesRead) {
-          if (bytesRead == 0) {
-            controller.close(); // EoF
-          } else {
-            // Copy into Dart heap
-            final chunk = Uint8List.fromList(currentBuffer.buffer.ref.iov_base
-                .cast<Uint8>()
-                .asTypedList(bytesRead));
-
-            final fetchAgain = emit(chunk);
-            hasPendingOperation = false;
-            if (fetchAgain) readAndEmit();
-          }
-        });
-      } else {
-        // Slightly slower path, read from the RandomAccessFile
-        const chunkSize = 65536;
-        var length = chunkSize;
-        if (remaining != null) {
-          length = min(length, remaining!);
-        }
-
-        file!.read(length).then((chunk) {
-          final fetchAgain = emit(chunk);
-          if (fetchAgain) readAndEmit();
-        });
-      }
-    }
+    final remaining = end == null ? null : end - (start ?? 0);
 
     controller
       ..onListen = () {
@@ -239,28 +170,22 @@ class RingBasedFile extends RingBasedFileSystemEntity implements File {
           }
         }).then((openedFile) {
           file = openedFile;
-          buffer = ring.buffers.useBuffer();
 
-          if (controller.hasListener) {
-            readAndEmit();
-          }
+          controller
+              .addStream(ReadFromFdStream(ring, openedFile.fd,
+                  path: path, bytesToRead: remaining))
+              .then((void _) {
+            file?.close();
+            controller.close();
+          });
         }, onError: (Object e, StackTrace s) {
           controller
             ..addError(e, s)
             ..close();
         });
       }
-      ..onResume = () {
-        if (file != null && !hasPendingOperation) {
-          // Finished opening the file, but no pending fetch? Let's go again!
-          readAndEmit();
-        }
-      }
       ..onCancel = () {
         file?.close();
-        if (buffer != null) {
-          ring.buffers.returnBuffer(buffer!);
-        }
       };
 
     return controller.stream;
@@ -406,42 +331,60 @@ class _OpenedFile extends RandomAccessFile {
   final int fd;
 
   var _isClosed = false;
+  var _asyncOperationInProgress = false;
 
   _OpenedFile(this.uring, this.file, this.fd);
 
-  void _checkOpen() {
+  void _checkCanStart() {
     if (_isClosed) {
       throw StateError('Using RandomAccessFile after calling close');
     }
+
+    if (_asyncOperationInProgress) {
+      throw StateError(
+          'An async operation is already in progress on this file. '
+          'Please await it before starting a new one');
+    }
+  }
+
+  Future<T> _run<T>(Future<T> future) {
+    assert(!_asyncOperationInProgress, 'Had pending operation');
+    _asyncOperationInProgress = true;
+
+    return future.whenComplete(() => _asyncOperationInProgress = false);
   }
 
   @override
   Future<void> close() async {
-    _checkOpen();
-    _isClosed = true;
-    await flush();
-    return uring.run(uring.close(fd, file.path));
+    if (_isClosed) return;
+
+    _checkCanStart();
+    return _run(Future.sync(() async {
+      _isClosed = true;
+      return uring.run(uring.close(fd, file.path));
+    }));
   }
 
   @override
   void closeSync() {
-    _checkOpen();
+    _checkCanStart();
     _isClosed = true;
-    flushSync();
     uring.runSync(uring.close(fd, file.path));
   }
 
   @override
   Future<RandomAccessFile> flush() {
-    return uring
+    _checkCanStart();
+    return _run(uring
         .run(uring.fsync(fd, file.path))
         .onError<FileSystemException>((error, _) {},
             test: (error) => error.osError?.errorCode == EINVAL)
-        .then((_) => this);
+        .then((_) => this));
   }
 
   @override
   void flushSync() {
+    _checkCanStart();
     try {
       return uring.runSync(uring.fsync(fd, file.path));
     } on FileSystemException catch (e) {
@@ -455,11 +398,13 @@ class _OpenedFile extends RandomAccessFile {
 
   @override
   Future<int> length() {
+    _checkCanStart();
     return Future.value(lengthSync());
   }
 
   @override
   int lengthSync() {
+    _checkCanStart();
     final offset = positionSync();
     final endOffset = uring.binding.dartio_lseek(fd, 0, SEEK_END)
       ..throwIfError(uring.binding);
@@ -489,42 +434,48 @@ class _OpenedFile extends RandomAccessFile {
 
   @override
   Future<int> position() {
+    _checkCanStart();
     return Future.value(positionSync());
   }
 
   @override
   int positionSync() {
+    _checkCanStart();
     return uring.binding.dartio_lseek(fd, 0, SEEK_CUR)
       ..throwIfError(uring.binding);
   }
 
   @override
-  Future<Uint8List> read(int count) async {
-    final buffer = uring.allocator.allocate<Uint8>(count);
+  Future<Uint8List> read(int count) {
+    _checkCanStart();
+    return _run(Future.sync(() async {
+      final buffer = uring.allocator.allocate<Uint8>(count);
 
-    try {
-      var totalBytesRead = 0;
-      while (totalBytesRead < count) {
-        final bytesRead = await uring.run(uring.read(
-            fd, buffer.elementAt(totalBytesRead), count - totalBytesRead));
-        totalBytesRead += bytesRead;
+      try {
+        var totalBytesRead = 0;
+        while (totalBytesRead < count) {
+          final bytesRead = await uring.run(uring.read(
+              fd, buffer.elementAt(totalBytesRead), count - totalBytesRead));
+          totalBytesRead += bytesRead;
 
-        if (bytesRead == 0) {
-          break; // End of file reached
+          if (bytesRead == 0) {
+            break; // End of file reached
+          }
         }
+
+        final inDartHeap = Uint8List(totalBytesRead);
+        inDartHeap.setAll(0, buffer.asTypedList(totalBytesRead));
+
+        return inDartHeap;
+      } finally {
+        uring.allocator.free(buffer);
       }
-
-      final inDartHeap = Uint8List(totalBytesRead);
-      inDartHeap.setAll(0, buffer.asTypedList(totalBytesRead));
-
-      return inDartHeap;
-    } finally {
-      uring.allocator.free(buffer);
-    }
+    }));
   }
 
   @override
   Uint8List readSync(int count) {
+    _checkCanStart();
     final buffer = uring.allocator.allocate<Uint8>(count);
 
     try {
@@ -567,7 +518,6 @@ class _OpenedFile extends RandomAccessFile {
     RangeError.checkValidRange(start, end, buffer.length);
     final count = (end ?? buffer.length) - start;
 
-    // todo: Avoid the copy here
     final bytesRead = await read(count);
     buffer.setAll(start, bytesRead);
     return bytesRead.length;
@@ -578,7 +528,6 @@ class _OpenedFile extends RandomAccessFile {
     RangeError.checkValidRange(start, end, buffer.length);
     final count = (end ?? buffer.length) - start;
 
-    // todo: Avoid the copy here
     final bytesRead = readSync(count);
     buffer.setAll(start, bytesRead);
     return bytesRead.length;
@@ -592,6 +541,7 @@ class _OpenedFile extends RandomAccessFile {
 
   @override
   void setPositionSync(int position) {
+    _checkCanStart();
     uring.binding
         .dartio_lseek(fd, position, SEEK_SET)
         .throwIfError(uring.binding);
@@ -605,6 +555,7 @@ class _OpenedFile extends RandomAccessFile {
 
   @override
   void truncateSync(int length) {
+    _checkCanStart();
     uring.binding.dartio_ftruncate(fd, length).throwIfError(uring.binding);
   }
 
@@ -633,32 +584,38 @@ class _OpenedFile extends RandomAccessFile {
 
   @override
   Future<RandomAccessFile> writeFrom(List<int> buffer,
-      [int start = 0, int? end]) async {
+      [int start = 0, int? end]) {
     RangeError.checkValidRange(start, end, buffer.length);
-    final effectiveEnd = end ?? buffer.length;
-    final length = effectiveEnd - start;
+    _checkCanStart();
 
-    final nativeBuffer =
-        uring.allocator.allocateBytes(buffer, start, effectiveEnd);
-    try {
-      var totalBytesWritten = 0;
+    return Future.sync(() async {
+      final effectiveEnd = end ?? buffer.length;
+      final length = effectiveEnd - start;
 
-      while (totalBytesWritten < length) {
-        totalBytesWritten += await uring.run(uring.write(
-            fd,
-            nativeBuffer.elementAt(totalBytesWritten),
-            length - totalBytesWritten));
+      final nativeBuffer =
+          uring.allocator.allocateBytes(buffer, start, effectiveEnd);
+      try {
+        var totalBytesWritten = 0;
+
+        while (totalBytesWritten < length) {
+          totalBytesWritten += await uring.run(uring.write(
+              fd,
+              nativeBuffer.elementAt(totalBytesWritten),
+              length - totalBytesWritten));
+        }
+
+        return this;
+      } finally {
+        uring.allocator.free(nativeBuffer);
       }
-
-      return this;
-    } finally {
-      uring.allocator.free(nativeBuffer);
-    }
+    });
   }
 
   @override
   void writeFromSync(List<int> buffer, [int start = 0, int? end]) {
     RangeError.checkValidRange(start, end, buffer.length);
+    _checkCanStart();
+
     final effectiveEnd = end ?? buffer.length;
     final length = effectiveEnd - start;
 
@@ -687,6 +644,26 @@ class _OpenedFile extends RandomAccessFile {
   @override
   void writeStringSync(String string, {Encoding encoding = utf8}) {
     return writeFromSync(encoding.encode(string));
+  }
+}
+
+class ReadFromFdStream extends IOStream<List<int>> {
+  final int fd;
+
+  /// The original file's path, used in error messages.
+  final String? path;
+
+  ReadFromFdStream(IOUringImpl ring, this.fd, {int? bytesToRead, this.path})
+      : super(ring, bytesToRead: bytesToRead);
+
+  @override
+  Operation<int> read(Pointer<Uint8> buffer, int length) {
+    return ring.read(fd, buffer, length, path: path);
+  }
+
+  @override
+  Operation<int> readFixed(ManagedBuffer buffer, int length) {
+    return ring.readFixed(fd, buffer, length, path: path);
   }
 }
 

@@ -5,6 +5,7 @@ import '../io_uring.dart';
 import 'file_system_entity.dart';
 import 'file_system_entity.dart' as fse;
 import 'socket.dart';
+import 'stdio.dart';
 
 T runWithIOUring<T>(T Function() body, IOUring uring) {
   final impl = uring as IOUringImpl;
@@ -14,6 +15,9 @@ T runWithIOUring<T>(T Function() body, IOUring uring) {
 
 class _RingOverrides extends IOOverrides {
   final IOUringImpl ring;
+
+  @override
+  late final Stdin stdin = RingBasedStdin(super.stdin, ring);
 
   _RingOverrides(this.ring);
 

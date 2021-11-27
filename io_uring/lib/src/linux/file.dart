@@ -9,6 +9,10 @@ class open_how extends Struct {
   external int resolve;
 }
 
+const STDIN_FILENO = 0;
+const STDOUT_FILENO = 1;
+const STDERR_FILENO = 2;
+
 const AT_FDCWD = -100;
 const AT_SYMLINK_NOFOLLOW = 0x100;
 
