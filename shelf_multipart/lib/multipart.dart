@@ -54,7 +54,7 @@ extension ReadMultipartRequest on Request {
 
     return MimeMultipartTransformer(boundary)
         .bind(read())
-        .map((part) => Multipart._(this, part));
+        .map((part) => Multipart(this, part));
   }
 
   /// Extracts the `boundary` parameter from the content-type header, if this is
@@ -86,7 +86,7 @@ class Multipart extends MimeMultipart {
     return Encoding.getByName(contentType.parameters['charset']);
   }
 
-  Multipart._(this._originalRequest, this._inner)
+  Multipart(this._originalRequest, this._inner)
       : headers = CaseInsensitiveMap.from(_inner.headers);
 
   MediaType? _parseContentType() {
