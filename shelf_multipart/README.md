@@ -9,7 +9,7 @@ To handle multipart requests, use the `ReadMultipartRequest` extension from the
 import 'package:shelf_multipart/multipart.dart';
 import 'package:shelf/shelf.dart';
 
-Future<Response> myHandler(Request request) {
+Future<Response> myHandler(Request request) async {
   if (!request.isMultipart) {
     return Response(401); // not a multipart request
   }

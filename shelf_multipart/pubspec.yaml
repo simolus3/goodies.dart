@@ -1,6 +1,6 @@
 name: shelf_multipart
 description: shelf_multipart parses multipart and form-data requests for shelf handlers.
-version: 0.1.0
+version: 1.0.0
 repository: https://github.com/simolus3/goodies.dart/tree/main/shelf_multipart
 issue_tracker: https://github.com/simolus3/goodies.dart/issues
 
