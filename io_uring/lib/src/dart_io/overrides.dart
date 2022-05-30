@@ -59,7 +59,7 @@ class _RingOverrides extends IOOverrides {
 
   @override
   Future<Socket> socketConnect(dynamic host, int port,
-      {dynamic sourceAddress, Duration? timeout}) {
+      {dynamic sourceAddress, int? sourcePort, Duration? timeout}) {
     return socketStartConnect(host, port,
             sourceAddress: sourceAddress, timeout: timeout)
         .then((task) => task.socket);
@@ -67,7 +67,7 @@ class _RingOverrides extends IOOverrides {
 
   @override
   Future<ConnectionTask<Socket>> socketStartConnect(dynamic host, int port,
-      {dynamic sourceAddress, Duration? timeout}) {
+      {dynamic sourceAddress, int? sourcePort, Duration? timeout}) {
     return RingBasedSocket.startConnect(ring, host, port,
         sourceAddress: sourceAddress);
   }

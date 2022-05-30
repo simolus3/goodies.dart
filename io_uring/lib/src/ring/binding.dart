@@ -90,10 +90,6 @@ class iovec extends Struct {
   external int iov_len;
 }
 
-typedef _load_native = Uint32 Function(Pointer<Uint32>);
-typedef _load_dart = int Function(Pointer<Uint32>);
-typedef _store_native = Void Function(Pointer<Uint32>, Uint32);
-typedef _store_dart = void Function(Pointer<Uint32>, int);
 typedef _setup = Pointer<dart_io_ring> Function(Pointer<Pointer<Int8>>);
 typedef _enter_native = Int32 Function(Int32, Uint32, Uint32, Uint32);
 typedef _enter_dart = int Function(int, int, int, int);
@@ -138,9 +134,6 @@ typedef _memset_dart = Pointer<Void> Function(Pointer<Void>, int c, int n);
 class Binding {
   final DynamicLibrary library;
 
-  final _load_dart dartio_load_atomic;
-  final _store_dart dartio_store_atomic;
-
   final _setup dartio_uring_setup;
   final _register_dart dartio_uring_register;
   final _enter_dart dartio_uring_enter;
@@ -164,13 +157,7 @@ class Binding {
   final _memset_dart memset;
 
   Binding(this.library)
-      : dartio_load_atomic = library.lookupFunction<_load_native, _load_dart>(
-            'dartio_load_atomic',
-            isLeaf: _canUseIsLeaf),
-        dartio_store_atomic = library
-            .lookupFunction<_store_native, _store_dart>('dartio_store_atomic',
-                isLeaf: _canUseIsLeaf),
-        dartio_uring_setup = library.lookupFunction<_setup, _setup>(
+      : dartio_uring_setup = library.lookupFunction<_setup, _setup>(
             'dartio_uring_setup',
             isLeaf: _canUseIsLeaf),
         dartio_uring_enter = library.lookupFunction<_enter_native, _enter_dart>(

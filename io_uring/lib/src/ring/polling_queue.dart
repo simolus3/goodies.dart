@@ -175,7 +175,7 @@ class PollingQueue {
     }
 
     final submissions = _submissions;
-    final head = binding.dartio_load_atomic(submissions.head);
+    final head = submissions.head.value;
     final tail = submissions.tail.value;
     final next = tail + 1;
 
@@ -205,9 +205,8 @@ class PollingQueue {
     // this event doesn't complete synchronously after being added.
     _addedTaskDuringFetch = true;
 
-    // Submit the event to the Kernel! Ensure that the kernel sees the SQE
-    // updates before it sees the tail update.
-    binding.dartio_store_atomic(submissions.tail, next);
+    // Submit the event to the Kernel!
+    submissions.tail.value = next;
     final result = binding.dartio_uring_enter(ring.fd, 1, waitFor, 0);
 
     if (result < 0) {
@@ -223,7 +222,7 @@ class PollingQueue {
     final originalHead = completions.head.value;
     var head = originalHead;
 
-    while (head == binding.dartio_load_atomic(completions.tail)) {
+    while (head == completions.tail.value) {
       // Synchronously wait for this to change (0 to submit, wait for 1)
       binding.dartio_uring_enter(ring.fd, 0, 1, 0);
     }
@@ -231,7 +230,7 @@ class PollingQueue {
     late int result;
 
     // We're on a ring buffer, so if head == tail we caught up.
-    while (head != binding.dartio_load_atomic(completions.tail)) {
+    while (head != completions.tail.value) {
       final cqePtr =
           completions.cqes.elementAt(head & completions.ring_mask.value);
       final cqe = cqePtr.ref;

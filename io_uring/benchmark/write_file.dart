@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:io_uring/io_uring.dart';
 
 const _chunkSize = 1024 * 512; // 0.5 MiB
-const _totalChunks = 1024; // 0.5 GiB
+const _totalChunks = 1024 * 10; // 5 GiB
 
 final Uint8List _chunk = Uint8List(_chunkSize);
 

@@ -189,18 +189,3 @@ int dartio_uring_register(struct dart_io_ring* ring, unsigned int opcode, void *
     return 0;
   }
 }
-
-#define io_uring_smp_store_release(p, v)			\
-	atomic_store_explicit((_Atomic __typeof__(*(p)) *)(p), (v), \
-			      memory_order_release)
-#define io_uring_smp_load_acquire(p)				\
-	atomic_load_explicit((_Atomic __typeof__(*(p)) *)(p),	\
-			     memory_order_acquire)
-
-uint32_t dartio_load_atomic(uint32_t *ptr) {
-  return io_uring_smp_load_acquire(ptr);
-}
-
-void dartio_store_atomic(uint32_t *ptr, uint32_t value) {
-  io_uring_smp_store_release(ptr, value);
-}
