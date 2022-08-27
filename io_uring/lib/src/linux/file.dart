@@ -1,5 +1,7 @@
 import 'dart:ffi';
 
+// ignore_for_file: constant_identifier_names, camel_case_types
+
 class open_how extends Struct {
   @Uint64()
   external int flags;

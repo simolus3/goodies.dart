@@ -2,6 +2,8 @@ import 'dart:ffi';
 
 import 'dart:io';
 
+// ignore_for_file: constant_identifier_names, library_private_types_in_public_api, non_constant_identifier_names, camel_case_types
+
 class statx_timestamp extends Struct {
   @Uint64()
   external int tv_sec;

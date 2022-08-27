@@ -143,7 +143,11 @@ class RingBasedFile extends RingBasedFileSystemEntity implements File {
   }
 
   @override
-  Future<_OpenedFile> open({FileMode mode = FileMode.read}) {
+  Future<RandomAccessFile> open({FileMode mode = FileMode.read}) {
+    return _openFile(mode: mode);
+  }
+
+  Future<_OpenedFile> _openFile({FileMode mode = FileMode.read}) {
     return ring.run(_open(mode)).then((fd) => _OpenedFile(ring, this, fd));
   }
 
@@ -162,7 +166,7 @@ class RingBasedFile extends RingBasedFileSystemEntity implements File {
 
     controller
       ..onListen = () {
-        open(mode: FileMode.read).then<_OpenedFile>((file) {
+        _openFile(mode: FileMode.read).then<_OpenedFile>((file) {
           if (start != null) {
             return file.setPosition(start);
           } else {
@@ -199,7 +203,7 @@ class RingBasedFile extends RingBasedFileSystemEntity implements File {
 
   @override
   IOSink openWrite({FileMode mode = FileMode.write, Encoding encoding = utf8}) {
-    final file = open(mode: mode);
+    final file = _openFile(mode: mode);
 
     final buffer = ring.buffers.useBuffer();
     final StreamConsumer<List<int>> consumer;

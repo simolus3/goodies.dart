@@ -31,5 +31,5 @@ targets:
         - "pubspec.yaml"
         - "$package$"
         - "lib/$lib$"
-        - "native/**"
+        - "lib/**"
         - "tool/**" # included for incremental builds

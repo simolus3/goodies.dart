@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'dart:typed_data';
 
+// ignore_for_file: constant_identifier_names
 const AF_UNIX = 1;
 const AF_INET = 2;
 const AF_INET6 = 10;

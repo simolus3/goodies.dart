@@ -128,8 +128,113 @@ class _IORingManagedSocket {
   }
 }
 
-class RingBasedSocket extends Stream<Uint8List> implements Socket {
-  final _IORingManagedSocket socket;
+Future<ConnectionTask<Socket>> startConnect(
+    IOUringImpl ring, dynamic host, int port,
+    {dynamic sourceAddress, Duration? timeout}) async {
+  List<InternetAddress> resolvedHosts;
+
+  if (host is InternetAddress) {
+    resolvedHosts = [host];
+  } else if (host is String) {
+    resolvedHosts = await InternetAddress.lookup(host);
+  } else {
+    throw ArgumentError.value(
+        host, 'host', 'Must be a string or an internet address');
+  }
+
+  // We may have multiple addresses to try out (e.g. because both IPv4 and
+  // IPv6 are available from a given [host] name). We start connection tasks
+  // in parallel and cancel others when the first one is done.
+  final winningSocket = Completer<_RingBasedSocket>();
+  final tasks = <ConnectionTask<void>>[];
+  Timer? timeoutTimer;
+
+  for (final host in resolvedHosts) {
+    final socket = _IORingManagedSocket._createSocket(
+        ring, host.type.linuxSocketType, SOCK_STREAM);
+
+    final task = socket._connect(host, port);
+    tasks.add(task);
+
+    // ignore: unawaited_futures
+    task.socket.then(
+      (done) {
+        tasks.remove(task);
+
+        if (!winningSocket.isCompleted) {
+          // This socket was connected first, complete!
+          winningSocket.complete(_RingBasedSocket(socket));
+          timeoutTimer?.cancel();
+
+          // This also means that we have to cancel all other tasks
+          for (final remaining in tasks) {
+            remaining.cancel();
+          }
+        } else {
+          // Another socket was done first, so close this one.
+          socket
+              ._close(forRead: true, forWrite: true)
+              .catchError((Object ignore) {});
+        }
+      },
+      onError: (Object e, StackTrace s) {
+        if (!winningSocket.isCompleted) {
+          tasks.remove(task);
+
+          if (tasks.isEmpty) {
+            // All operations failed, so report final failure
+            winningSocket.completeError(e, s);
+          }
+        }
+
+        if (e is CancelledException) {
+          // Another socket was done first, so close this one.
+          socket
+              ._close(forRead: true, forWrite: true)
+              .catchError((Object ignore) {});
+        }
+      },
+    );
+  }
+
+  void cancel() {
+    if (!winningSocket.isCompleted) {
+      winningSocket.completeError(const CancelledException());
+
+      for (final task in tasks) {
+        task.cancel();
+      }
+    }
+  }
+
+  if (timeout != null) {
+    timeoutTimer = Timer(timeout, cancel);
+  }
+
+  final done = winningSocket.future.then((socket) async {
+    if (sourceAddress != null) {
+      // Bind socket locally (bind to port 0 to get a random port)
+      if (sourceAddress is InternetAddress) {
+        socket._socket._bind(sourceAddress, 0);
+      } else if (sourceAddress is String) {
+        final addresses = await InternetAddress.lookup(sourceAddress);
+        for (final address in addresses) {
+          socket._socket._bind(address, 0);
+        }
+      } else {
+        throw ArgumentError.value(sourceAddress, 'sourceAddress',
+            'Must be an InternetAddress or a string');
+      }
+    }
+
+    return socket;
+  });
+
+  return RingConnectionTask(done, cancel);
+}
+
+class _RingBasedSocket extends Stream<Uint8List> implements Socket {
+  final _IORingManagedSocket _socket;
 
   @override
   Encoding encoding = utf8;
@@ -154,18 +259,18 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
 
   final _SocketReader _reader;
 
-  RingBasedSocket(this.socket)
-      : _reader = _SocketReader(socket.ring, socket.fd) {
+  _RingBasedSocket(this._socket)
+      : _reader = _SocketReader(_socket.ring, _socket.fd) {
     // When we get to this point, we have a fully connected socket so we can
     // query what it is bound to
-    final ring = socket.ring;
+    final ring = _socket.ring;
     final addressBuffer = ring.allocator.allocate<Void>(1024);
     final length = ring.allocator<Uint32>();
 
     try {
       length.value = 1024;
       ring.binding
-          .dartio_getsockname(socket.fd, addressBuffer, length)
+          .dartio_getsockname(_socket.fd, addressBuffer, length)
           .throwIfError(ring.binding);
       var addr = _DartAddressAndPort.ofNative(addressBuffer);
       address = addr.address;
@@ -173,7 +278,7 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
 
       length.value = 1024;
       ring.binding
-          .dartio_getpeername(socket.fd, addressBuffer, length)
+          .dartio_getpeername(_socket.fd, addressBuffer, length)
           .throwIfError(ring.binding);
       addr = _DartAddressAndPort.ofNative(addressBuffer);
       remoteAddress = addr.address;
@@ -182,111 +287,6 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
       ring.allocator.free(addressBuffer);
       ring.allocator.free(length);
     }
-  }
-
-  static Future<ConnectionTask<Socket>> startConnect(
-      IOUringImpl ring, dynamic host, int port,
-      {dynamic sourceAddress, Duration? timeout}) async {
-    List<InternetAddress> resolvedHosts;
-
-    if (host is InternetAddress) {
-      resolvedHosts = [host];
-    } else if (host is String) {
-      resolvedHosts = await InternetAddress.lookup(host);
-    } else {
-      throw ArgumentError.value(
-          host, 'host', 'Must be a string or an internet address');
-    }
-
-    // We may have multiple addresses to try out (e.g. because both IPv4 and
-    // IPv6 are available from a given [host] name). We start connection tasks
-    // in parallel and cancel others when the first one is done.
-    final winningSocket = Completer<RingBasedSocket>();
-    final tasks = <ConnectionTask<void>>[];
-    Timer? timeoutTimer;
-
-    for (final host in resolvedHosts) {
-      final socket = _IORingManagedSocket._createSocket(
-          ring, host.type.linuxSocketType, SOCK_STREAM);
-
-      final task = socket._connect(host, port);
-      tasks.add(task);
-
-      // ignore: unawaited_futures
-      task.socket.then(
-        (done) {
-          tasks.remove(task);
-
-          if (!winningSocket.isCompleted) {
-            // This socket was connected first, complete!
-            winningSocket.complete(RingBasedSocket(socket));
-            timeoutTimer?.cancel();
-
-            // This also means that we have to cancel all other tasks
-            for (final remaining in tasks) {
-              remaining.cancel();
-            }
-          } else {
-            // Another socket was done first, so close this one.
-            socket
-                ._close(forRead: true, forWrite: true)
-                .catchError((Object ignore) {});
-          }
-        },
-        onError: (Object e, StackTrace s) {
-          if (!winningSocket.isCompleted) {
-            tasks.remove(task);
-
-            if (tasks.isEmpty) {
-              // All operations failed, so report final failure
-              winningSocket.completeError(e, s);
-            }
-          }
-
-          if (e is CancelledException) {
-            // Another socket was done first, so close this one.
-            socket
-                ._close(forRead: true, forWrite: true)
-                .catchError((Object ignore) {});
-          }
-        },
-      );
-    }
-
-    void cancel() {
-      if (!winningSocket.isCompleted) {
-        winningSocket.completeError(const CancelledException());
-
-        for (final task in tasks) {
-          task.cancel();
-        }
-      }
-    }
-
-    if (timeout != null) {
-      timeoutTimer = Timer(timeout, cancel);
-    }
-
-    final done = winningSocket.future.then((socket) async {
-      if (sourceAddress != null) {
-        // Bind socket locally (bind to port 0 to get a random port)
-        if (sourceAddress is InternetAddress) {
-          socket.socket._bind(sourceAddress, 0);
-        } else if (sourceAddress is String) {
-          final addresses = await InternetAddress.lookup(sourceAddress);
-          for (final address in addresses) {
-            socket.socket._bind(address, 0);
-          }
-        } else {
-          throw ArgumentError.value(sourceAddress, 'sourceAddress',
-              'Must be an InternetAddress or a string');
-        }
-      }
-
-      return socket;
-    });
-
-    return RingConnectionTask(done, cancel);
   }
 
   void _checkCanAdd() {
@@ -305,18 +305,18 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
     final target = _pendingWrites.first;
     target.didStartWrite = true;
 
-    final op = socket.ring.send(
-      socket.fd,
+    final op = _socket.ring.send(
+      _socket.fd,
       target.start.elementAt(target.bytesWritten).cast(),
       target.bytesRemaining,
       0,
     );
-    final write = socket.ring.runCancellable(op);
+    final write = _socket.ring.runCancellable(op);
     _currentWrite = write;
 
     void writeFinished() {
       _currentWrite = null;
-      socket.ring.allocator.free(target.start);
+      _socket.ring.allocator.free(target.start);
     }
 
     write.socket.then((bytesWritten) {
@@ -350,7 +350,7 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
 
   void _addInternal(List<int> data) {
     final last = _pendingWrites.isEmpty ? null : _pendingWrites.last;
-    final allocator = socket.ring.allocator;
+    final allocator = _socket.ring.allocator;
 
     if (last != null && !last.didStartWrite) {
       // Combine two events for efficiency
@@ -416,13 +416,13 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
       // Don't interfere with pending writes, those buffers will be freed the
       // write completes.
       if (!pending.didStartWrite) {
-        socket.ring.allocator.free(pending.start);
+        _socket.ring.allocator.free(pending.start);
       }
     }
     _pendingWrites.clear();
 
     if (!_writeClosed.isCompleted) {
-      _writeClosed.complete(socket._close(forWrite: true));
+      _writeClosed.complete(_socket._close(forWrite: true));
     }
 
     return done;
@@ -433,7 +433,7 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
     await close();
 
     _reader.close();
-    await socket._close(forRead: true);
+    await _socket._close(forRead: true);
   }
 
   @override
@@ -447,7 +447,7 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
 
   @override
   Uint8List getRawOption(RawSocketOption option) {
-    final ring = socket.ring;
+    final ring = _socket.ring;
 
     final lengthPtr = ring.allocator<Uint32>()..value = option.value.length;
     final data = ring.allocator<Uint8>(option.value.length);
@@ -455,7 +455,7 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
     try {
       ring.binding
           .dartio_getsockopt(
-            socket.fd,
+            _socket.fd,
             option.level,
             option.option,
             data,
@@ -491,21 +491,18 @@ class RingBasedSocket extends Stream<Uint8List> implements Socket {
 
   @override
   void setRawOption(RawSocketOption option) {
-    final ring = socket.ring;
+    final ring = _socket.ring;
 
-    final lengthPtr = ring.allocator<Uint32>()..value = option.value.length;
     final data = ring.allocator<Uint8>(option.value.length)
       ..asTypedList(option.value.length).setAll(0, option.value);
 
     try {
       ring.binding
-          .dartio_setsockopt(
-              socket.fd, option.level, option.option, data, lengthPtr)
+          .dartio_setsockopt(_socket.fd, option.level, option.option, data,
+              option.value.length)
           .throwIfError(ring.binding);
     } finally {
-      ring.allocator
-        ..free(lengthPtr)
-        ..free(data);
+      ring.allocator.free(data);
     }
   }
 
@@ -562,8 +559,18 @@ class _PendingSocketWrite extends LinkedListEntry<_PendingSocketWrite> {
   _PendingSocketWrite(this.start, this.length);
 }
 
-class RingBasedServerSocket extends Stream<Socket> implements ServerSocket {
-  final _IORingManagedSocket socket;
+ServerSocket bind(
+    IOUringImpl ring, InternetAddress addr, int port, int backlog) {
+  final socket = _IORingManagedSocket._createSocket(
+      ring, addr.type.linuxSocketType, SOCK_STREAM)
+    .._bind(addr, port)
+    ..listen(backlog);
+
+  return _RingBasedServerSocket(socket);
+}
+
+class _RingBasedServerSocket extends Stream<Socket> implements ServerSocket {
+  final _IORingManagedSocket _socket;
   // This can be a synchronous controller because we'll only emit events in
   // response to another async operation.
   // Further, it allows us to not enqueue unecessary accept syscalls if the
@@ -579,14 +586,14 @@ class RingBasedServerSocket extends Stream<Socket> implements ServerSocket {
   @override
   late final int port;
 
-  RingBasedServerSocket(this.socket)
-      : addressPtr = socket.ring.allocator.allocate(1024),
-        lengthPtr = socket.ring.allocator() {
-    final ring = socket.ring;
+  _RingBasedServerSocket(this._socket)
+      : addressPtr = _socket.ring.allocator.allocate(1024),
+        lengthPtr = _socket.ring.allocator() {
+    final ring = _socket.ring;
 
     lengthPtr.value = 1024;
     ring.binding
-        .dartio_getsockname(socket.fd, addressPtr, lengthPtr)
+        .dartio_getsockname(_socket.fd, addressPtr, lengthPtr)
         .throwIfError(ring.binding);
     final addr = _DartAddressAndPort.ofNative(addressPtr);
     address = addr.address;
@@ -599,25 +606,15 @@ class RingBasedServerSocket extends Stream<Socket> implements ServerSocket {
       ..onCancel = _pauseOrCancel;
   }
 
-  static RingBasedServerSocket bind(
-      IOUringImpl ring, InternetAddress addr, int port, int backlog) {
-    final socket = _IORingManagedSocket._createSocket(
-        ring, addr.type.linuxSocketType, SOCK_STREAM)
-      .._bind(addr, port)
-      ..listen(backlog);
-
-    return RingBasedServerSocket(socket);
-  }
-
   void _startOrResume() {
     if (_currentAcceptTask == null) {
-      final task = socket.ring
-          .runCancellable(socket.ring.accept(socket.fd, addressPtr, lengthPtr));
+      final task = _socket.ring.runCancellable(
+          _socket.ring.accept(_socket.fd, addressPtr, lengthPtr));
       task.socket.then((fd) {
         _currentAcceptTask = null;
 
         final connectedSocket =
-            RingBasedSocket(_IORingManagedSocket(fd, socket.ring));
+            _RingBasedSocket(_IORingManagedSocket(fd, _socket.ring));
         controller.add(connectedSocket);
 
         if (controller.hasListener && !controller.isPaused) {
@@ -646,11 +643,11 @@ class RingBasedServerSocket extends Stream<Socket> implements ServerSocket {
     _pauseOrCancel();
 
     try {
-      await socket._close(forRead: true, forWrite: true);
+      await _socket._close(forRead: true, forWrite: true);
       await controller.close();
       return this;
     } finally {
-      socket.ring.allocator
+      _socket.ring.allocator
         ..free(addressPtr)
         ..free(lengthPtr);
     }
@@ -663,6 +660,8 @@ class RingBasedServerSocket extends Stream<Socket> implements ServerSocket {
         onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   }
 }
+
+// ignore_for_file: camel_case_types
 
 class _sockaddr_in extends Struct {
   @Uint16()

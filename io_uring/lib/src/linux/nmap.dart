@@ -1,3 +1,4 @@
+// ignore_for_file: constant_identifier_names
 const PROT_READ = 1;
 const PROT_WRITE = 2;
 const PROT_EXEC = 4;

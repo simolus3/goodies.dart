@@ -6,6 +6,8 @@ import 'package:ffi/ffi.dart';
 const _profile = bool.hasEnvironment('profile');
 const _canUseIsLeaf = !_profile;
 
+// ignore_for_file: constant_identifier_names, library_private_types_in_public_api, non_constant_identifier_names, camel_case_types
+
 class io_uring_sqe extends Struct {
   @Uint8()
   external int opcode;
@@ -111,8 +113,8 @@ typedef _getsockopt_native = Int32 Function(
     Int32, Int32, Int32, Pointer, Pointer);
 typedef _getsockopt_dart = int Function(int, int, int, Pointer, Pointer);
 typedef _setsockopt_native = Int32 Function(
-    Int32, Int32, Int32, Pointer, Pointer);
-typedef _setsockopt_dart = int Function(int, int, int, Pointer, Pointer);
+    Int32, Int32, Int32, Pointer, Int32);
+typedef _setsockopt_dart = int Function(int, int, int, Pointer, int);
 typedef _lseek_native = Int64 Function(Int32, Int64, Int32);
 typedef _lseek_dart = int Function(int, int, int);
 typedef _ftruncate_native = Int32 Function(Int32, Int64);

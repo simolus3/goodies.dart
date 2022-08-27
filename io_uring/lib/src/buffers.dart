@@ -31,6 +31,8 @@ class SharedBuffers {
 
       return buffer.._isUsed = true;
     }
+
+    return null;
   }
 
   void returnBuffer(ManagedBuffer buffer) {

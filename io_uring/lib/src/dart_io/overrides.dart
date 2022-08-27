@@ -68,8 +68,7 @@ class _RingOverrides extends IOOverrides {
   @override
   Future<ConnectionTask<Socket>> socketStartConnect(dynamic host, int port,
       {dynamic sourceAddress, int? sourcePort, Duration? timeout}) {
-    return RingBasedSocket.startConnect(ring, host, port,
-        sourceAddress: sourceAddress);
+    return startConnect(ring, host, port, sourceAddress: sourceAddress);
   }
 
   @override
@@ -106,6 +105,6 @@ class _RingOverrides extends IOOverrides {
       throw StateError('No suitable address found');
     }
 
-    return RingBasedServerSocket.bind(ring, target, port, backlog);
+    return bind(ring, target, port, backlog);
   }
 }

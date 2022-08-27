@@ -9,11 +9,10 @@ import 'file.dart';
 class RingBasedStdin extends Stream<List<int>> implements Stdin {
   final Stdin _nativeSdin;
 
-  late final ReadFromFdStream _stream;
+  final ReadFromFdStream _stream;
 
-  RingBasedStdin(this._nativeSdin, IOUringImpl ring) {
-    _stream = ReadFromFdStream(ring, STDIN_FILENO, path: 'stdin');
-  }
+  RingBasedStdin(this._nativeSdin, IOUringImpl ring)
+      : _stream = ReadFromFdStream(ring, STDIN_FILENO, path: 'stdin');
 
   @override
   bool get echoMode => _nativeSdin.echoMode;
@@ -47,14 +46,14 @@ class RingBasedStdin extends Stream<List<int>> implements Stdin {
   String? readLineSync(
       {Encoding encoding = systemEncoding, bool retainNewlines = false}) {
     // We're on a decent platform, so a linebreak is just \n
-    const LF = 10;
+    const lf = 10;
     final List<int> line = <int>[];
 
     while (true) {
       final byte = readByteSync();
       if (byte < 0) break; // stdin closed
 
-      if (byte == LF) {
+      if (byte == lf) {
         if (retainNewlines) line.add(byte);
         break;
       }

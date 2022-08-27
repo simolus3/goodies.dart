@@ -195,8 +195,8 @@ class PollingQueue {
 
     if (_traceOperations) {
       final op = sqe.op;
-      print('submit (head = $head, i = $index, op = $op, k = $head): 0x' +
-          bytesToHex(sqePtr, sizeOf<io_uring_sqe>()));
+      print(
+          'submit (head = $head, i = $index, op = $op, k = $head): 0x${bytesToHex(sqePtr, sizeOf<io_uring_sqe>())}');
     }
 
     // Since we're using synchronous completers, we may add a new task
@@ -237,7 +237,7 @@ class PollingQueue {
       head++;
 
       if (_traceOperations) {
-        print('io_uring done: 0x' + bytesToHex(cqePtr, sizeOf<io_uring_cqe>()));
+        print('io_uring done: 0x${bytesToHex(cqePtr, sizeOf<io_uring_cqe>())}');
       }
 
       if (cqe.user_data == id) {

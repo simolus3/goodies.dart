@@ -14,26 +14,16 @@ abstract class IOUring {
 
   Future<void> dispose();
 
-  static Future<IOUring> initialize(
-      {DynamicLibrary? helper, Allocator alloc = malloc}) async {
-    DynamicLibrary? resolved = helper;
-
-    resolved ??= DynamicLibrary.open(
-        '/home/simon/programming/goodies.dart/io_uring/native/libdart_io_uring.so');
-
-    if (resolved == null) {
-      final location = await Isolate.resolvePackageUri(
-          Uri.parse('package:io_uring/src/lib.so'));
-
-      if (location == null) {
-        throw StateError('No `library` provided to `runWithIOUring` and none '
-            'could be inferred.');
-      }
-
-      resolved = DynamicLibrary.open(location.path);
+  static Future<IOUring> initialize({Allocator alloc = malloc}) async {
+    final path = await Isolate.resolvePackageUri(
+        Uri.parse('package:io_uring/src/libdart_io_uring.so'));
+    if (path == null) {
+      throw StateError('Could not find shared library with io_uring helpers');
     }
 
-    final binding = Binding(resolved);
+    final library = DynamicLibrary.open(path.toFilePath());
+
+    final binding = Binding(library);
     final queue = PollingQueue(binding, alloc);
     return IOUringImpl(queue, alloc);
   }
