@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  schedule:
+    # Make sure everything is still working by running the CI weekly.
+    - cron: "0 5 * * 1"
 
 env:
   PUB_ENVIRONMENT: bot.github
@@ -14,14 +17,14 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Cache pub dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /tmp/pub_cache
           key: ${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
       - uses: dart-lang/setup-dart@v1
-      
+
       - name: Install dependencies
         run: |-
           pushd shelf_multipart
@@ -36,14 +39,14 @@ jobs:
         working-directory: shelf_multipart
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Cache pub dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /tmp/pub_cache
           key: ${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
       - uses: dart-lang/setup-dart@v1
-      
+
       - name: Install dependencies
         run: dart pub get
       - name: Verify format
