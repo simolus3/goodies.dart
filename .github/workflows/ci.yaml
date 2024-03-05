@@ -9,10 +9,6 @@ on:
     # Make sure everything is still working by running the CI weekly.
     - cron: "0 5 * * 1"
 
-env:
-  PUB_ENVIRONMENT: bot.github
-  PUB_CACHE: "/tmp/pub_cache/"
-
 jobs:
   setup:
     runs-on: ubuntu-latest
@@ -21,14 +17,15 @@ jobs:
       - name: Cache pub dependencies
         uses: actions/cache@v4
         with:
-          path: /tmp/pub_cache
+          path: |
+            ${{ env.PUB_CACHE }}
+            shelf_multipart/pubspec.lock
           key: ${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
       - uses: dart-lang/setup-dart@v1
-
       - name: Install dependencies
         run: |-
           pushd shelf_multipart
-          dart pub get
+          dart pub upgrade
           popd
 
   shelf_multipart:
@@ -43,7 +40,9 @@ jobs:
       - name: Cache pub dependencies
         uses: actions/cache@v4
         with:
-          path: /tmp/pub_cache
+          path: |
+            ${{ env.PUB_CACHE }}
+            shelf_multipart/pubspec.lock
           key: ${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
       - uses: dart-lang/setup-dart@v1
 
