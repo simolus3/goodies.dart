@@ -12,21 +12,45 @@ on:
 jobs:
   setup:
     runs-on: ubuntu-latest
+    outputs:
+      dart-version: ${{ steps.setup-dart.outputs.dart-version }}
+      cache-key: dart-packages-${{ steps.deps-after.outputs.lockfiles }}
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
+        id: setup-dart
+      - uses: actions/cache/restore@v4
         with:
           path: |
             ${{ env.PUB_CACHE }}
             shelf_multipart/pubspec.lock
-          key: ${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          # We can only use fallback keys here since we don't know the lockfile contents yet.
+          key: dart-packages-stub
+          restore-keys: |
+            dart-packages-
+
+      - name: "Hash pubspec lockfiles before pub upgrade"
+        id: deps-before
+        run: |
+          echo "lockfiles=${{ hashFiles('**/pubspec.lock') }}" >> $GITHUB_OUTPUT
       - name: Install dependencies
         run: |-
           pushd shelf_multipart
           dart pub upgrade
           popd
+      - name: "Hash pubspec lockfiles after pub upgrade"
+        id: deps-after
+        run: |
+          echo "lockfiles=${{ hashFiles('**/pubspec.lock') }}" >> $GITHUB_OUTPUT
+
+      - name: "Update cache due to changed pubspec.lock"
+        if: ${{ !failure() && ( steps.deps-after.outputs.lockfiles != steps.deps-before.outputs.lockfiles) }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ env.PUB_CACHE }}
+            shelf_multipart/pubspec.lock
+          key: dart-packages-${{ steps.deps-after.outputs.lockfiles }}
 
   shelf_multipart:
     runs-on: ubuntu-latest
@@ -38,15 +62,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
+        with:
+          sdk: ${{ needs.analyze.outputs.dart-version }}
+      - uses: actions/cache/restore@v4
         with:
           path: |
             ${{ env.PUB_CACHE }}
             shelf_multipart/pubspec.lock
-          key: ${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          key: ${{ needs.analyze.outputs.cache-key }}
+          fail-on-cache-miss: true
       - name: Install dependencies
-        run: dart pub get
+        run: dart pub get --offline
       - name: Verify format
         run: dart format --output=none --set-exit-if-changed .
       - name: Analyze project
