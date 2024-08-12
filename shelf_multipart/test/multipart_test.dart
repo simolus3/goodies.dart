@@ -2,25 +2,25 @@ import 'dart:convert';
 
 import 'package:mime/mime.dart';
 import 'package:shelf/shelf.dart';
-import 'package:shelf_multipart/multipart.dart';
+import 'package:shelf_multipart/shelf_multipart.dart';
 import 'package:test/test.dart';
 
 final _uri = Uri.parse('http://localhost/');
 
 void main() {
-  group('isMultipart returns', () {
-    test('false for requests without a content-type header', () {
-      Response handler(Request r) => Response.ok(r.isMultipart.toString());
+  group('multipart() returns', () {
+    test('null for requests without a content-type header', () {
+      Response handler(Request r) => Response.ok(r.multipart().toString());
       final response = handler(Request('POST', _uri));
 
-      expect(response.readAsString(), completion('false'));
+      expect(response.readAsString(), completion('null'));
     });
 
     test('false for Content-Type: multipart without boundary', () {
       expect(
         Request('GET', _uri, headers: {'Content-Type': 'multipart/mixed'})
-            .isMultipart,
-        isFalse,
+            .multipart(),
+        isNull,
       );
     });
 
@@ -28,15 +28,17 @@ void main() {
       expect(
         Request('GET', _uri, headers: {
           'Content-Type': 'multipart/mixed; boundary=gc0p4Jq0M2Yt08j34c0p'
-        }).isMultipart,
-        isTrue,
+        }).multipart(),
+        isNotNull,
       );
     });
   });
 
   test('can access part headers without case sensitivity', () async {
     Future<Response> handler(Request request) async {
-      final part = await request.parts.first;
+      final multipart = request.multipart()!;
+
+      final part = await multipart.parts.first;
       return Response.ok(part.headers['foo'].toString());
     }
 
@@ -59,7 +61,7 @@ void main() {
   test('can access multipart bodies', () async {
     Future<Response> handler(Request request) async {
       final result = StringBuffer();
-      await for (final part in request.parts) {
+      await for (final part in MultipartRequest.of(request)!.parts) {
         await utf8.decoder.bind(part).forEach(result.write);
       }
 
@@ -91,7 +93,7 @@ void main() {
   test('can read body with readBytes()', () async {
     Future<Response> handler(Request request) async {
       var totalLength = 0;
-      await for (final part in request.parts) {
+      await for (final part in MultipartRequest.of(request)!.parts) {
         totalLength += (await part.readBytes()).length;
       }
 
@@ -119,7 +121,7 @@ void main() {
   test('can read body with readString()', () async {
     Future<Response> handler(Request request) async {
       final result = StringBuffer();
-      await for (final part in request.parts) {
+      await for (final part in MultipartRequest.of(request)!.parts) {
         result.write(await part.readString());
       }
 
@@ -148,15 +150,9 @@ void main() {
     );
   });
 
-  test('throws when calling .parts on a non-multipart request', () {
-    Response handler(Request request) => Response.ok(request.parts.toString());
-
-    expect(() => handler(Request('POST', _uri)), throwsStateError);
-  });
-
   test('throws when reading an ill-formed multipart body', () {
     Future<Response> handler(Request request) async {
-      await for (final _ in request.parts) {}
+      await for (final _ in MultipartRequest.of(request)!.parts) {}
 
       return Response.ok('ok');
     }
@@ -174,5 +170,23 @@ void main() {
     );
 
     expect(handler(request), throwsA(isA<MimeMultipartException>()));
+  });
+
+  test('can access content type', () async {
+    Future<Response> handler(Request request) async {
+      return Response.ok(request.multipart()?.mediaType.subtype);
+    }
+
+    final response = await handler(Request(
+      'POST',
+      _uri,
+      body: '\r\n--end\r\n'
+          '\r\n',
+      headers: {
+        'Content-Type': 'multipart/alternative; boundary=end',
+      },
+    ));
+
+    expect(response.readAsString(), completion('alternative'));
   });
 }

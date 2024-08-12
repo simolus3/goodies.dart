@@ -1,8 +1,7 @@
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 
-import 'package:shelf_multipart/form_data.dart';
-import 'package:shelf_multipart/multipart.dart';
+import 'package:shelf_multipart/shelf_multipart.dart';
 
 Future<void> main() async {
   await shelf_io.serve(_handler, 'localhost', 8080);
@@ -13,21 +12,19 @@ Future<void> main() async {
 }
 
 Future<Response> _handler(Request request) async {
-  if (!request.isMultipart) {
-    return Response.ok('Not a multipart request');
-  } else if (request.isMultipartForm) {
+  if (request.formData() case var form?) {
     final description = StringBuffer('Parsed form multipart request\n');
 
-    await for (final formData in request.multipartFormData) {
+    await for (final formData in form.formData) {
       description
           .writeln('${formData.name}: ${await formData.part.readString()}');
     }
 
     return Response.ok(description.toString());
-  } else {
+  } else if (request.multipart() case var multipart?) {
     final description = StringBuffer('Regular multipart request\n');
 
-    await for (final part in request.parts) {
+    await for (final part in multipart.parts) {
       description.writeln('new part');
 
       part.headers
@@ -39,5 +36,7 @@ Future<Response> _handler(Request request) async {
     }
 
     return Response.ok(description.toString());
+  } else {
+    return Response.ok('Not a multipart request');
   }
 }

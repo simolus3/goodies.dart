@@ -1,18 +1,19 @@
 import 'dart:async';
 
-import 'package:shelf_multipart/form_data.dart';
 import 'package:shelf/shelf.dart';
+import 'package:shelf_multipart/shelf_multipart.dart';
 import 'package:test/test.dart';
 
 final _uri = Uri.parse('http://localhost/');
 
 void main() {
-  group('isMultipartForm', () {
+  group('checks whether a request has form data', () {
     const cases = {
-      null: false,
-      'multipart/mixed': false,
-      'multipart/form-data': true,
-      'application/json': false,
+      null: isNull,
+      'multipart/mixed': isNull,
+      'multipart/form-data': isNull,
+      'multipart/form-data; boundary=end': isNotNull,
+      'application/json': isNull,
     };
 
     cases.forEach((header, expected) {
@@ -21,7 +22,7 @@ void main() {
           if (header != null) 'content-type': header,
         });
 
-        expect(request.isMultipartForm, expected);
+        expect(request.formData(), expected);
       });
     });
   });
@@ -45,7 +46,7 @@ void main() {
           '\r\n--end--\r\n',
     );
 
-    final reader = StreamIterator(request.multipartFormData);
+    final reader = StreamIterator(FormDataRequest.of(request)!.formData);
     expect(await reader.moveNext(), isTrue);
 
     var form = reader.current;
