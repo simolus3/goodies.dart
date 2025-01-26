@@ -2,7 +2,7 @@
 ///
 /// The [ReadMultipartRequest] extensions can be used to check whether a request
 /// is a multipart request and to extract the individual parts.
-library shelf_multipart;
+library;
 
 import 'dart:async';
 import 'dart:convert';
