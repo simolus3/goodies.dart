@@ -9,10 +9,10 @@ environment:
 
 dependencies:
   http_parser: ^4.0.0
-  mime: ^1.0.0
+  mime: ^2.0.0
   shelf: ^1.0.0
   string_scanner: ^1.1.0
 
 dev_dependencies:
-  lints: ^4.0.0
+  lints: ^5.1.1
   test: ^1.16.0
