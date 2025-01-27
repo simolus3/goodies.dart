@@ -9,7 +9,7 @@ final _uri = Uri.parse('http://localhost/');
 
 void main() {
   group('multipart() returns', () {
-    test('null for requests without a content-type header', () {
+    test('null for requests without a content-type header', () async {
       Response handler(Request r) => Response.ok(r.multipart().toString());
       final response = handler(Request('POST', _uri));
 
@@ -150,7 +150,7 @@ void main() {
     );
   });
 
-  test('throws when reading an ill-formed multipart body', () {
+  test('throws when reading an ill-formed multipart body', () async {
     Future<Response> handler(Request request) async {
       await for (final _ in MultipartRequest.of(request)!.parts) {}
 
@@ -173,9 +173,8 @@ void main() {
   });
 
   test('can access content type', () async {
-    Future<Response> handler(Request request) async {
-      return Response.ok(request.multipart()?.mediaType.subtype);
-    }
+    Future<Response> handler(Request request) async =>
+        Response.ok(request.multipart()?.mediaType.subtype);
 
     final response = await handler(Request(
       'POST',

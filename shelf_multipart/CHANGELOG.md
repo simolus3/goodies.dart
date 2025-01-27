@@ -1,3 +1,7 @@
+## 2.0.1
+
+- Support version 2.x of the `mime` package.
+
 ## 2.0.0
 
 - __Breaking__: The two libraries have been merged into one,
