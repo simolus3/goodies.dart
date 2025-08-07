@@ -1,0 +1,11 @@
+[package]
+name = "dart-locks"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+dart-sys = "4.1.5"
+lazy_static = "1.5.0"
