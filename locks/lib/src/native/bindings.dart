@@ -19,7 +19,7 @@ external void pkg_locks_free_client(Pointer<Void> client);
 
 @Native<
   Pointer<Void> Function(Size, Pointer<Uint8>, Pointer<Void>, Uint32, Int64)
->(isLeaf: true)
+>()
 external Pointer<Void> pkg_locks_obtain(
   int length,
   Pointer<Uint8> name,
@@ -28,7 +28,7 @@ external Pointer<Void> pkg_locks_obtain(
   int port,
 );
 
-@Native<Void Function(Pointer<Void>)>(isLeaf: true)
+@Native<Void Function(Pointer<Void>)>()
 external void pkg_locks_unlock(Pointer<Void> ptr);
 
 @Native<Void Function(Uint64)>(isLeaf: true)
