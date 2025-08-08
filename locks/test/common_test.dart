@@ -87,6 +87,16 @@ void main() {
       expect(b, isNotNull);
       b!.release();
     });
+
+    test('cancel', () async {
+      final blocker = await lockManager.request(prefix).completion;
+
+      final request = lockManager.request(prefix);
+      request.cancel();
+      expect(request.completion, throwsA(isA<LockRequestCancelled>()));
+
+      blocker!.release();
+    });
   });
 
   group('reqeuest validation', () {

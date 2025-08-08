@@ -94,8 +94,8 @@ final class NativeLockManager implements LockManager, Finalizable {
     pkg_locks_snapshot(port.sendPort.nativePort);
 
     final msg = (await port.first) as List;
-    final held = <SnapshotEntry>[];
-    final pending = <SnapshotEntry>[];
+    final held = <LockInfo>[];
+    final pending = <LockInfo>[];
 
     for (var i = 0; i < msg.length; i += 4) {
       final name = msg[i] as String;
@@ -103,11 +103,9 @@ final class NativeLockManager implements LockManager, Finalizable {
       final exclusive = msg[i + 2] as bool;
       final isHeld = msg[i + 3] as bool;
 
-      (isHeld ? held : pending).add((
-        name: name,
-        clientId: clientId,
-        exclusive: exclusive,
-      ));
+      (isHeld ? held : pending).add(
+        LockInfo(name: name, clientId: clientId, exclusive: exclusive),
+      );
     }
 
     return LockManagerSnapshot(pending: pending, held: held);
@@ -138,9 +136,11 @@ final class _InternalLockRequest implements Finalizable {
       switch (msg[0] as String) {
         case 'stolen':
           _stolen.complete();
+          close();
         case 'unavailable':
           wasUnavailable = true;
           _granted.complete();
+          close();
         case 'locked':
           _granted.complete();
         default:
@@ -172,6 +172,10 @@ final class _NativeLockRequest implements LockRequest {
     }
     if (_request._granted.isCompleted) {
       throw StateError('Cannot cancel requests that have already been granted');
+    }
+
+    if (!_request._granted.isCompleted) {
+      _request._granted.completeError(const LockRequestCancelled());
     }
 
     _request.close();

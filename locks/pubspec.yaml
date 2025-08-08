@@ -1,12 +1,11 @@
 name: locks
-description: A starting point for Dart libraries or applications.
-version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+description: A native, asynchronous, read-write lock that works across isolates and tabs.
+version: 0.1.0
+repository: https://github.com/simolus3/goodies.dart
 
 environment:
   sdk: ^3.8.2
 
-# Add regular dependencies here.
 dependencies:
   ffi: ^2.1.4
   hooks: ^0.20.0

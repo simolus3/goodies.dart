@@ -19,8 +19,8 @@ final class WebLockManager implements LockManager {
     final snapshot = await _implementation.query().toDart;
 
     return LockManagerSnapshot(
-      pending: snapshot.pending.toDart.map((e) => e.asSnapshotEntry).toList(),
-      held: snapshot.held.toDart.map((e) => e.asSnapshotEntry).toList(),
+      pending: snapshot.pending.toDart.map((e) => e.asLockInfo).toList(),
+      held: snapshot.held.toDart.map((e) => e.asLockInfo).toList(),
     );
   }
 
@@ -41,7 +41,9 @@ final class WebLockManager implements LockManager {
 
     JSPromise<JSAny?> callback(web.Lock? lock) {
       final didGrant = lock != null;
-      state._didAcquire.complete(didGrant);
+      if (!state._didAcquire.isCompleted) {
+        state._didAcquire.complete(didGrant);
+      }
 
       if (didGrant) {
         return state._release.future.toJS;
@@ -89,8 +91,12 @@ final class WebLockManager implements LockManager {
 }
 
 extension on web.LockInfo {
-  SnapshotEntry get asSnapshotEntry {
-    return (name: name, exclusive: mode == 'exclusive', clientId: clientId);
+  LockInfo get asLockInfo {
+    return LockInfo(
+      name: name,
+      exclusive: mode == 'exclusive',
+      clientId: clientId,
+    );
   }
 }
 
@@ -140,6 +146,7 @@ final class _LockRequest implements LockRequest {
 
     if (!_state._release.isCompleted) {
       _state.abortController?.abort();
+      _state._didAcquire.completeError(const LockRequestCancelled());
       _state._release.complete();
     }
   }
