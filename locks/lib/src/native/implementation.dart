@@ -45,6 +45,16 @@ final class NativeLockManager implements LockManager, Finalizable {
     bool ifAvailable = false,
     bool steal = false,
   }) {
+    // Prevent things forbidden on the web for consistency
+    if (name.startsWith('-')) {
+      throw ArgumentError.value(name, 'name', 'Must not start with a hyphen');
+    }
+    if (steal && (!exclusive || ifAvailable)) {
+      throw ArgumentError.value(
+        'When steal is enable, exclusive must also be true and ifAvailable must be disabled.',
+      );
+    }
+
     final port = ReceivePort('obtaining lock $name');
     final encoded = utf8.encode(name);
 
@@ -75,7 +85,7 @@ final class NativeLockManager implements LockManager, Finalizable {
       exclusive: exclusive,
       port: port,
     );
-    return _NativeLockRequest(internalRequest);
+    return _NativeLockRequest(internalRequest, ifAvailable || steal);
   }
 
   @override
@@ -151,11 +161,19 @@ final class _InternalLockRequest implements Finalizable {
 
 final class _NativeLockRequest implements LockRequest {
   final _InternalLockRequest _request;
+  final bool isIfAvailableOrSteal;
 
-  _NativeLockRequest(this._request);
+  _NativeLockRequest(this._request, this.isIfAvailableOrSteal);
 
   @override
   void cancel() {
+    if (isIfAvailableOrSteal) {
+      throw StateError('Cannot cancel steal or ifAvailable requests');
+    }
+    if (_request._granted.isCompleted) {
+      throw StateError('Cannot cancel requests that have already been granted');
+    }
+
     _request.close();
   }
 

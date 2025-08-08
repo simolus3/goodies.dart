@@ -121,6 +121,13 @@ void main() {
       final request = lockManager.request(prefix, ifAvailable: true);
       expect(() => request.cancel(), _throws);
     });
+
+    test('cannot cancel after lock was granted', () async {
+      final request = lockManager.request(prefix);
+      final held = await request.completion;
+      expect(() => request.cancel(), _throws);
+      held!.release();
+    });
   });
 }
 
