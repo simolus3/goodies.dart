@@ -10,11 +10,64 @@ on:
     - cron: "0 5 * * 1"
 
 jobs:
-  compile_native:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{  }}
+  compile_native_linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu,x86_64-unknown-linux-gnu,riscv64gc-unknown-linux-gnu,armv7-unknown-linux-gnueabihf,aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+
+      - name: Build x64
+        working-directory: locks/native
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+      - name: Build aarch64
+        working-directory: locks/native
+        run: cargo build --release --target aarch64-unknown-linux-gnu
+      - name: Build armv7
+        working-directory: locks/native
+        run: cargo build --release --target armv7-unknown-linux-gnueabihf
+      - name: Build riscv64gc
+        working-directory: locks/native
+        run: cargo build --release --target riscv64gc-unknown-linux-gnu
+      - name: Build Android libs
+        working-directory: locks/native
+        run: cargo ndk -t armeabi-v7a -t arm64-v8a -t x86_64 --release -o target/android
+
+  compile_native_macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin,aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+      - name: Build macOS
+        working-directory: locks/native
+        run: |
+          cargo build --release --target x86_64-apple-darwin
+          cargo build --release --target aarch64-apple-darwin
+      - name: Build iOS
+        working-directory: locks/native
+        run: |
+          cargo build --release --target aarch64-apple-ios
+          cargo build --release --target aarch64-apple-ios-sim
+          cargo build --release --target x86_64-apple-ios
+
+  compile_native_windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
+      - name: Build Windows
+        working-directory: locks/native
+        run: |
+          cargo build --release --target x86_64-pc-windows-msvc
+          cargo build --release --target aarch64-pc-windows-msvc
 
   setup:
     runs-on: ubuntu-latest
