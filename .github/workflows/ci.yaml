@@ -20,6 +20,9 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-ndk
+      - name: Install cross-compiling GCC
+        run: |
+          sudo apt install -y gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu gcc-arm-linux-gnueabihf
 
       - name: Build x64
         working-directory: locks/native
@@ -55,6 +58,21 @@ jobs:
           cargo build --release --target aarch64-apple-ios
           cargo build --release --target aarch64-apple-ios-sim
           cargo build --release --target x86_64-apple-ios
+      - name: Copy libraries
+        working-directory: locks/native
+        run: |
+          mkdir out
+          cp target/x86_64-apple-darwin/release/libdart_locks.dylib out/libdart_locks.macos_x64.dylib
+          cp target/aarch64-apple-darwin/release/libdart_locks.dylib out/libdart_locks.macos_aarch64.dylib
+
+          cp target/aarch64-apple-ios/release/libdart_locks.dylib out/libdart_locks.ios_aarch64.dylib
+          cp target/aarch64-apple-ios-sim/release/libdart_locks.dylib out/libdart_locks.ios_sim_aarch64.dylib
+          cp target/x86_64-apple-ios/release/libdart_locks.dylib out/libdart_locks.ios_sim_x64.dylib
+      - uses: actions/upload-artifact@v4
+        with:
+          name: locks-apple
+          retention-days: 1
+          path: locks/native/out
 
   compile_native_windows:
     runs-on: windows-latest
@@ -68,6 +86,17 @@ jobs:
         run: |
           cargo build --release --target x86_64-pc-windows-msvc
           cargo build --release --target aarch64-pc-windows-msvc
+      - name: Copy libraries
+        working-directory: locks/native
+        run: |
+          mkdir out
+          cp target/x86_64-pc-windows-msvc/release/dart_locks.dll out/dart_locks.win_x64.dll
+          cp target/aarch64-pc-windows-msvc/release/dart_locks.dll out/dart_locks.win_aarch64.dll
+      - uses: actions/upload-artifact@v4
+        with:
+          name: locks-windows
+          retention-days: 1
+          path: locks/native/out
 
   setup:
     runs-on: ubuntu-latest
