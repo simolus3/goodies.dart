@@ -14,8 +14,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-unknown-linux-gnu,x86_64-unknown-linux-gnu,riscv64gc-unknown-linux-gnu,armv7-unknown-linux-gnueabihf,aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
-      - uses: cargo-bins/cargo-binstall@main
-      - run: cargo binstall cargo-ndk
+      - run: cargo install cargo-ndk
       - name: Install cross-compiling GCC
         run: |
           sudo apt install -y gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu gcc-arm-linux-gnueabihf
