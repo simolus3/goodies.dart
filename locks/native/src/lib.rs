@@ -1,14 +1,13 @@
 use std::{
     ffi::{CString, c_void},
     rc::Rc,
-    sync::{Arc, atomic::AtomicBool},
+    sync::Arc,
 };
 
-use dart_sys::{Dart_InitializeApiDL, Dart_Port_DL};
 use lazy_static::lazy_static;
 
 use crate::{
-    dart::{DartObject, DartPort},
+    dart::{DartApi, DartObject, DartPort},
     manager::LockManager,
     state::LockRequest,
 };
@@ -19,16 +18,16 @@ mod state;
 
 lazy_static! {
     static ref LOCKS: LockManager = LockManager::default();
-    static ref HAS_INITIALIZED_DL: AtomicBool = AtomicBool::new(false);
 }
 
 struct LockClient {
     name: String,
+    pub(crate) api: DartApi,
 }
 
 struct RequestSnapshot {
     name: Rc<CString>,
-    clientId: CString,
+    client_id: CString,
     exclusive: bool,
     held: bool,
 }
@@ -39,19 +38,14 @@ pub extern "C" fn pkg_locks_client(
     name: *const u8,
     api: *mut c_void,
 ) -> *const c_void {
-    if !HAS_INITIALIZED_DL.fetch_or(true, std::sync::atomic::Ordering::SeqCst) {
-        let res = unsafe { Dart_InitializeApiDL(api) };
-        if res != 0 {
-            panic!("Dart_InitializeApiDL returned {res}")
-        }
-    }
+    let api = unsafe { DartApi::from_raw(api) };
 
     let name = unsafe {
         std::str::from_utf8_unchecked(std::slice::from_raw_parts(name, name_length as usize))
     }
     .to_string();
 
-    Arc::into_raw(Arc::new(LockClient { name })).cast()
+    Arc::into_raw(Arc::new(LockClient { name, api })).cast()
 }
 
 #[unsafe(no_mangle)]
@@ -65,7 +59,7 @@ pub extern "C" fn pkg_locks_obtain(
     name: *const u8,
     client: *const c_void,
     flags: u32,
-    port: Dart_Port_DL,
+    port: DartPort,
 ) -> *const c_void {
     const FLAG_SHARED: u32 = 0x01;
     const FLAG_STEAL: u32 = 0x02;
@@ -87,7 +81,7 @@ pub extern "C" fn pkg_locks_obtain(
         steal: (flags & FLAG_STEAL) != 0,
         if_available: (flags & FLAG_IF_AVAILABLE) != 0,
         holds_lock: Default::default(),
-        notify: DartPort::from(port),
+        notify: port,
     });
 
     LOCKS.lock(request.clone());
@@ -101,7 +95,7 @@ pub extern "C" fn pkg_locks_unlock(ptr: *mut LockRequest) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn pkg_locks_snapshot(port: DartPort) {
+pub extern "C" fn pkg_locks_snapshot(client: *const c_void, port: DartPort) {
     let mut descriptions = Vec::<RequestSnapshot>::new();
     LOCKS.inspect(|state| {
         state.snapshot_into(&mut descriptions);
@@ -110,7 +104,7 @@ pub extern "C" fn pkg_locks_snapshot(port: DartPort) {
     let mut serialized_descriptions = Vec::<DartObject>::new();
     for description in &descriptions {
         serialized_descriptions.push(DartObject::from(description.name.as_c_str()));
-        serialized_descriptions.push(DartObject::from(description.clientId.as_c_str()));
+        serialized_descriptions.push(DartObject::from(description.client_id.as_c_str()));
         serialized_descriptions.push(DartObject::from(description.exclusive));
         serialized_descriptions.push(DartObject::from(description.held));
     }
@@ -118,5 +112,6 @@ pub extern "C" fn pkg_locks_snapshot(port: DartPort) {
     let mut double_indirection: Vec<&DartObject> =
         serialized_descriptions.iter().map(|r| r).collect();
 
-    port.send(&mut DartObject::array(&mut double_indirection));
+    let client = unsafe { client.cast::<LockClient>().as_ref() }.unwrap();
+    port.send(&client.api, &mut DartObject::array(&mut double_indirection));
 }

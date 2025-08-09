@@ -3,6 +3,7 @@ import 'package:hooks/hooks.dart';
 
 void main(List<String> args) async {
   await build(args, (input, output) async {
+    input.config.code.targetOS;
     output.assets.code.add(
       CodeAsset(
         package: 'locks',

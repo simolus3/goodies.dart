@@ -89,7 +89,7 @@ impl LockState {
         for pending in &self.pending {
             into.push(RequestSnapshot {
                 name: name.clone(),
-                clientId: CString::new(pending.client.name.clone()).unwrap(),
+                client_id: CString::new(pending.client.name.clone()).unwrap(),
                 exclusive: !pending.shared,
                 held: false,
             });
@@ -99,7 +99,7 @@ impl LockState {
             for active in &active.entries {
                 into.push(RequestSnapshot {
                     name: name.clone(),
-                    clientId: CString::new(active.client.name.clone()).unwrap(),
+                    client_id: CString::new(active.client.name.clone()).unwrap(),
                     exclusive: !active.shared,
                     held: true,
                 });
@@ -157,7 +157,8 @@ impl LockRequest {
         let locked = c"locked".into();
         let mut parts = [&locked];
 
-        self.notify.send(&mut DartObject::array(&mut parts))
+        self.notify
+            .send(&self.client.api, &mut DartObject::array(&mut parts))
     }
 
     fn notify_stolen(&self) {
@@ -165,7 +166,8 @@ impl LockRequest {
             let locked = c"stolen".into();
             let mut parts = [&locked];
 
-            self.notify.send(&mut DartObject::array(&mut parts));
+            self.notify
+                .send(&self.client.api, &mut DartObject::array(&mut parts));
         }
     }
 
@@ -173,7 +175,8 @@ impl LockRequest {
         let locked = c"unavailable".into();
         let mut parts = [&locked];
 
-        self.notify.send(&mut DartObject::array(&mut parts))
+        self.notify
+            .send(&self.client.api, &mut DartObject::array(&mut parts))
     }
 }
 

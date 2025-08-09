@@ -40,7 +40,7 @@ impl LockManager {
     }
 
     pub fn inspect(&self, mut f: impl FnMut(&LockState)) {
-        let mut locks = self.locks.lock().unwrap();
+        let locks = self.locks.lock().unwrap();
         for value in locks.values() {
             f(value);
         }
