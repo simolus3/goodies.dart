@@ -114,6 +114,7 @@ jobs:
     permissions:
       id-token: write # Required for authentication using OIDC
     runs-on: ubuntu-latest
+    needs: [compile_native_linux, compile_native_macos, compile_native_windows]
     environment: pub.dev
     steps:
       - uses: actions/checkout@v4
