@@ -5,7 +5,7 @@ linker = "x86_64-linux-gnu-gcc"
 linker = "aarch64-linux-gnu-gcc"
 
 [target.armv7-unknown-linux-gnueabihf]
-linker = "arm-linux-gnueabi-gcc"
+linker = "arm-linux-gnueabihf-gcc"
 
 [target.riscv64gc-unknown-linux-gnu]
 linker = "riscv64-linux-gnu-gcc"

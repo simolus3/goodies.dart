@@ -39,6 +39,24 @@ jobs:
       - name: Build Android libs
         working-directory: locks/native
         run: cargo ndk -t armeabi-v7a -t arm64-v8a -t x86_64 --release -o target/android
+      - name: Copy libraries
+        working-directory: locks/native
+        run: |
+          mkdir out
+          cp target/x86_64-unknown-linux-gnu/release/libdart_locks.dylib out/libdart_locks.linux_x64.so
+          cp target/aarch64-unknown-linux-gnu/release/libdart_locks.dylib out/libdart_locks.linux_aarch64.so
+          cp target/armv7-unknown-linux-gnueabihf/release/libdart_locks.dylib out/libdart_locks.linux_arm7.so
+          cp target/riscv64gc-unknown-linux-gnu/release/libdart_locks.dylib out/libdart_locks.linux_riscv.so
+      - uses: actions/upload-artifact@v4
+        with:
+          name: locks-linux
+          retention-days: 1
+          path: locks/native/out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: locks-android
+          retention-days: 1
+          path: locks/native/target/android
 
   compile_native_macos:
     runs-on: macos-latest
