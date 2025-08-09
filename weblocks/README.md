@@ -39,3 +39,9 @@ void main() async {
 ```
 
 For more details, see the documentation or the full example.
+
+## Development
+
+To work on this package, consider adding the `hooks` section in the `pubspec.yaml`
+that is currently commented out to use a debug build of the native code for the
+current host.
