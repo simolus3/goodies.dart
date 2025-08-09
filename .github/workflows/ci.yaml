@@ -38,7 +38,7 @@ jobs:
         run: cargo build --release --target riscv64gc-unknown-linux-gnu
       - name: Build Android libs
         working-directory: locks/native
-        run: cargo ndk -t armeabi-v7a -t arm64-v8a -t x86_64 --release -o target/android
+        run: cargo ndk -t armeabi-v7a -t arm64-v8a -t x86_64 -o target/android build --release
       - name: Copy libraries
         working-directory: locks/native
         run: |
@@ -120,7 +120,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       dart-version: ${{ steps.setup-dart.outputs.dart-version }}
-      cache-key: dart-packages-${{ steps.deps-after.outputs.lockfiles }}
+      cache-key: dart-packages2-${{ steps.deps-after.outputs.lockfiles }}
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
@@ -134,9 +134,9 @@ jobs:
             shelf_multipart/pubspec.lock
             locks/pubspec.lock
           # We can only use fallback keys here since we don't know the lockfile contents yet.
-          key: dart-packages-stub
+          key: dart-packages2-stub
           restore-keys: |
-            dart-packages-
+            dart-packages2-
 
       - name: "Hash pubspec lockfiles before pub upgrade"
         id: deps-before
@@ -163,7 +163,7 @@ jobs:
             ${{ env.PUB_CACHE }}
             shelf_multipart/pubspec.lock
             locks/pubspec.lock
-          key: dart-packages-${{ steps.deps-after.outputs.lockfiles }}
+          key: dart-packages2-${{ steps.deps-after.outputs.lockfiles }}
 
   shelf_multipart:
     runs-on: ubuntu-latest
