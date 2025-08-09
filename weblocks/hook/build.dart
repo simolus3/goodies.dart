@@ -20,7 +20,7 @@ void main(List<String> args) async {
 
       output.assets.code.add(
         CodeAsset(
-          package: 'locks',
+          package: 'weblocks',
           name: 'src/native/bindings.dart',
           linkMode: DynamicLoadingSystem(Uri.file(path)),
         ),

@@ -1,5 +1,5 @@
 /// @docImport 'dart:isolate';
-/// @docImport 'package:async_lock/async_lock.dart';
+/// @docImport 'package:weblocks/weblocks.dart';
 library;
 
 /// An instance managing access to a group of locks.

@@ -1,4 +1,4 @@
-name: async_lock
+name: weblocks
 description: A native, asynchronous, read-write lock that works across isolates and tabs.
 version: 0.0.0-wip
 repository: https://github.com/simolus3/goodies.dart
@@ -19,5 +19,5 @@ dev_dependencies:
 
 hooks:
   user_defines:
-    locks:
+    weblocks:
       local_build: true

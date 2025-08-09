@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:async_lock/async_lock.dart';
+import 'package:weblocks/weblocks.dart';
 import 'package:test/test.dart';
 
 void main() {

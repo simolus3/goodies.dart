@@ -21,7 +21,7 @@ final class NativeLockManager implements LockManager, Finalizable {
   factory NativeLockManager(String clientName) {
     final encoded = utf8.encode(clientName);
     return using((alloc) {
-      final client = pkg_async_lock_client(
+      final client = pkg_weblocks_client(
         encoded.length,
         alloc.allocBytes(encoded),
         NativeApi.initializeApiDLData,
@@ -70,7 +70,7 @@ final class NativeLockManager implements LockManager, Finalizable {
     }
 
     final request = using((alloc) {
-      return pkg_async_lock_obtain(
+      return pkg_weblocks_obtain(
         encoded.length,
         alloc.allocBytes(encoded),
         _client,
@@ -91,7 +91,7 @@ final class NativeLockManager implements LockManager, Finalizable {
   @override
   Future<LockManagerSnapshot> query() async {
     final port = ReceivePort('LockManager.query()');
-    pkg_async_lock_snapshot(_client, port.sendPort.nativePort);
+    pkg_weblocks_snapshot(_client, port.sendPort.nativePort);
 
     final msg = (await port.first) as List;
     final held = <LockInfo>[];
@@ -153,7 +153,7 @@ final class _InternalLockRequest implements Finalizable {
     if (!closed) {
       closed = true;
       requestFinalizer.detach(this);
-      pkg_async_lock_unlock(request);
+      pkg_weblocks_unlock(request);
       receivePortSubscription?.cancel();
     }
   }
