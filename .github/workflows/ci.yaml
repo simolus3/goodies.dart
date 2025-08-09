@@ -21,6 +21,7 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-ndk
+          fallback: cargo-binstall
       - name: Install cross-compiling GCC
         run: |
           sudo apt install -y gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu gcc-arm-linux-gnueabihf
