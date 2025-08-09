@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-#    branches: [ main, locks ]
+    branches: [ main, locks ]
   pull_request:
-#    branches: [ main ]
+    branches: [ main ]
   schedule:
     # Make sure everything is still working by running the CI weekly.
     - cron: "0 5 * * 1"
