@@ -1,0 +1,15 @@
+[package]
+name = "dart-locks"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lazy_static = "1.5.0"
+
+[profile.release]
+panic = "abort"
+opt-level = "z"
+lto = true

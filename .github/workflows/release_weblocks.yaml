@@ -1,13 +1,9 @@
-name: CI
+name: Release package:weblocks
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  schedule:
-    # Make sure everything is still working by running the CI weekly.
-    - cron: "0 5 * * 1"
+    tags:
+      - 'release/weblocks/[0-9]+.[0-9]+.[0-9]+*'
 
 jobs:
   # Note: Keep the compile_ jobs in sync with release_weblocks.yaml
@@ -116,116 +112,25 @@ jobs:
           retention-days: 1
           path: weblocks/native/out
 
-  setup:
+  publish:
+    permissions:
+      id-token: write # Required for authentication using OIDC
     runs-on: ubuntu-latest
-    outputs:
-      dart-version: ${{ steps.setup-dart.outputs.dart-version }}
-      cache-key: dart-packages-${{ steps.deps-after.outputs.lockfiles }}
+    environment: pub.dev
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
         id: setup-dart
         with:
           sdk: beta
-      - uses: actions/cache/restore@v4
-        with:
-          path: |
-            ${{ env.PUB_CACHE }}
-            shelf_multipart/pubspec.lock
-            weblocks/pubspec.lock
-          # We can only use fallback keys here since we don't know the lockfile contents yet.
-          key: dart-packages-stub
-          restore-keys: |
-            dart-packages-
-
-      - name: "Hash pubspec lockfiles before pub upgrade"
-        id: deps-before
-        run: |
-          echo "lockfiles=${{ hashFiles('**/pubspec.lock') }}" >> $GITHUB_OUTPUT
-      - name: Install dependencies
-        run: |-
-          pushd shelf_multipart
-          dart pub upgrade
-          popd
-          pushd weblocks
-          dart pub upgrade
-          popd
-      - name: "Hash pubspec lockfiles after pub upgrade"
-        id: deps-after
-        run: |
-          echo "lockfiles=${{ hashFiles('**/pubspec.lock') }}" >> $GITHUB_OUTPUT
-
-      - name: "Update cache due to changed pubspec.lock"
-        if: ${{ !failure() && ( steps.deps-after.outputs.lockfiles != steps.deps-before.outputs.lockfiles) }}
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ${{ env.PUB_CACHE }}
-            shelf_multipart/pubspec.lock
-            weblocks/pubspec.lock
-          key: dart-packages-${{ steps.deps-after.outputs.lockfiles }}
-
-  shelf_multipart:
-    runs-on: ubuntu-latest
-    needs: setup
-    defaults:
-      run:
-        working-directory: shelf_multipart
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
-        with:
-          sdk: ${{ needs.setup.outputs.dart-version }}
-      - uses: actions/cache/restore@v4
-        with:
-          path: |
-            ${{ env.PUB_CACHE }}
-            shelf_multipart/pubspec.lock
-          key: ${{ needs.setup.outputs.cache-key }}
-          fail-on-cache-miss: false #true
-      - name: Install dependencies
-        run: dart pub get # --offline
-      - name: Verify format
-        run: dart format --output=none --set-exit-if-changed .
-      - name: Analyze project
-        run: dart analyze --fatal-infos
-      - name: Run tests
-        run: dart test
-
-  weblocks:
-    runs-on: ubuntu-latest
-    needs: [setup, compile_native_linux, compile_native_macos, compile_native_windows]
-    defaults:
-      run:
-        working-directory: weblocks
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
-        with:
-          sdk: ${{ needs.setup.outputs.dart-version }}
-      - uses: actions/cache/restore@v4
-        with:
-          path: |
-            ${{ env.PUB_CACHE }}
-            weblocks/pubspec.lock
-          key: ${{ needs.setup.outputs.cache-key }}
-          fail-on-cache-miss: false #true
-      - name: Install dependencies
-        run: dart pub get # --offline
-      - name: Verify format
-        run: dart format --output=none --set-exit-if-changed .
-      - name: Analyze project
-        run: dart analyze --fatal-infos
-
       - name: Download libs
         uses: actions/download-artifact@v5
         with:
           merge-multiple: true
           path: weblocks/assets
-      - run: find assets
+      - run: dart pub get
         working-directory: weblocks
-
-      - name: Run tests
-        run: dart test
+      - run: dart pub publish --dry-run
+        working-directory: weblocks
+      - run: dart pub publish -f
+        working-directory: weblocks
