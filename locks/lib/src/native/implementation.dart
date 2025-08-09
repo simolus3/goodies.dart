@@ -91,7 +91,7 @@ final class NativeLockManager implements LockManager, Finalizable {
   @override
   Future<LockManagerSnapshot> query() async {
     final port = ReceivePort('LockManager.query()');
-    pkg_locks_snapshot(port.sendPort.nativePort);
+    pkg_locks_snapshot(_client, port.sendPort.nativePort);
 
     final msg = (await port.first) as List;
     final held = <LockInfo>[];

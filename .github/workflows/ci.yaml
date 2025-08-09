@@ -47,16 +47,15 @@ jobs:
           cp target/aarch64-unknown-linux-gnu/release/libdart_locks.so out/libdart_locks.linux_aarch64.so
           cp target/armv7-unknown-linux-gnueabihf/release/libdart_locks.so out/libdart_locks.linux_arm7.so
           cp target/riscv64gc-unknown-linux-gnu/release/libdart_locks.so out/libdart_locks.linux_riscv.so
+
+          cp target/android/x86_64/libdart_locks.so out/libdart_locks.android_x86_64.so
+          cp target/android/armeabi-v7a/libdart_locks.so out/libdart_locks.android_v7a.so
+          cp target/android/arm64-v8a/libdart_locks.so out/libdart_locks.android_v8a.so
       - uses: actions/upload-artifact@v4
         with:
           name: locks-linux
           retention-days: 1
           path: locks/native/out
-      - uses: actions/upload-artifact@v4
-        with:
-          name: locks-android
-          retention-days: 1
-          path: locks/native/target/android
 
   compile_native_macos:
     runs-on: macos-latest
@@ -183,9 +182,37 @@ jobs:
             ${{ env.PUB_CACHE }}
             shelf_multipart/pubspec.lock
           key: ${{ needs.setup.outputs.cache-key }}
-          fail-on-cache-miss: true
+          fail-on-cache-miss: false #true
       - name: Install dependencies
-        run: dart pub get --offline
+        run: dart pub get # --offline
+      - name: Verify format
+        run: dart format --output=none --set-exit-if-changed .
+      - name: Analyze project
+        run: dart analyze --fatal-infos
+      - name: Run tests
+        run: dart test
+
+  locks:
+    runs-on: ubuntu-latest
+    needs: setup
+    defaults:
+      run:
+        working-directory: locks
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ needs.setup.outputs.dart-version }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ env.PUB_CACHE }}
+            locks/pubspec.lock
+          key: ${{ needs.setup.outputs.cache-key }}
+          fail-on-cache-miss: false #true
+      - name: Install dependencies
+        run: dart pub get # --offline
       - name: Verify format
         run: dart format --output=none --set-exit-if-changed .
       - name: Analyze project

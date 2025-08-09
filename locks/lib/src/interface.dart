@@ -77,6 +77,11 @@ final class LockInfo implements LockDescription {
     required this.exclusive,
     required this.name,
   });
+
+  @override
+  String toString() {
+    return '(name: $name, exclusive: $exclusive, client: $clientId)';
+  }
 }
 
 /// A pending request to a lock.

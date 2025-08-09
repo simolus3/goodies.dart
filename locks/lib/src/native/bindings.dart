@@ -31,8 +31,8 @@ external Pointer<Void> pkg_locks_obtain(
 @Native<Void Function(Pointer<Void>)>()
 external void pkg_locks_unlock(Pointer<Void> ptr);
 
-@Native<Void Function(Uint64)>(isLeaf: true)
-external void pkg_locks_snapshot(int port);
+@Native<Void Function(Pointer<Void>, Uint64)>(isLeaf: true)
+external void pkg_locks_snapshot(Pointer<Void> client, int port);
 
 const FLAG_SHARED = 0x01;
 const FLAG_STEAL = 0x02;

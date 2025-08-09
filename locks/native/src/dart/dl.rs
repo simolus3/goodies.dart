@@ -44,10 +44,10 @@ impl DartApi {
                 }
 
                 let name = unsafe { CStr::from_ptr(entry.name) };
-                let function = entry.function;
 
                 if name == c"Dart_PostCObject" {
-                    post_object = unsafe { function.cast::<Option<PostObjectSignature>>().read() };
+                    let ptr: PostObjectSignature = unsafe { std::mem::transmute(entry.function) };
+                    post_object = Some(ptr);
                 }
             }
 
