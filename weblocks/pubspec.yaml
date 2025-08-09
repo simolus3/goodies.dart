@@ -1,6 +1,6 @@
 name: weblocks
 description: A native, asynchronous, read-write lock that works across isolates and tabs.
-version: 0.0.0-wip.1
+version: 0.1.0
 repository: https://github.com/simolus3/goodies.dart
 
 environment:

@@ -15,7 +15,7 @@ Of course, both platforms use an identical API, and behave similarly.
 ## Getting started
 
 Note that this package requires the `native-assets` experiment, meaning that it is currently only
-available on dev builds of the Dart SDK.
+available on beta builds of the Dart SDK.
 
 Apart from that, `dart pub add weblocks` is the only step to install this package. Build hooks will
 automatically download native sources where required.
