@@ -10,6 +10,7 @@ on:
     - cron: "0 5 * * 1"
 
 jobs:
+  # Note: Keep the compile_ jobs in sync with release_weblocks.yaml
   compile_native_linux:
     runs-on: ubuntu-latest
     steps:
@@ -217,5 +218,14 @@ jobs:
         run: dart format --output=none --set-exit-if-changed .
       - name: Analyze project
         run: dart analyze --fatal-infos
+
+      - name: Download libs
+        uses: actions/download-artifact@v5
+        with:
+          merge-multiple: true
+          path: weblocks/assets
+      - run: find assets
+        working-directory: weblocks
+
       - name: Run tests
         run: dart test
