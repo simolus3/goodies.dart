@@ -25,22 +25,22 @@ jobs:
           sudo apt install -y gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu gcc-arm-linux-gnueabihf
 
       - name: Build x64
-        working-directory: locks/native
+        working-directory: async_lock/native
         run: cargo build --release --target x86_64-unknown-linux-gnu
       - name: Build aarch64
-        working-directory: locks/native
+        working-directory: async_lock/native
         run: cargo build --release --target aarch64-unknown-linux-gnu
       - name: Build armv7
-        working-directory: locks/native
+        working-directory: async_lock/native
         run: cargo build --release --target armv7-unknown-linux-gnueabihf
       - name: Build riscv64gc
-        working-directory: locks/native
+        working-directory: async_lock/native
         run: cargo build --release --target riscv64gc-unknown-linux-gnu
       - name: Build Android libs
-        working-directory: locks/native
+        working-directory: async_lock/native
         run: cargo ndk -t armeabi-v7a -t arm64-v8a -t x86_64 -o target/android build --release
       - name: Copy libraries
-        working-directory: locks/native
+        working-directory: async_lock/native
         run: |
           mkdir out
           cp target/x86_64-unknown-linux-gnu/release/libdart_locks.so out/libdart_locks.linux_x64.so
@@ -55,7 +55,7 @@ jobs:
         with:
           name: locks-linux
           retention-days: 1
-          path: locks/native/out
+          path: async_lock/native/out
 
   compile_native_macos:
     runs-on: macos-latest
@@ -65,18 +65,18 @@ jobs:
         with:
           targets: x86_64-apple-darwin,aarch64-apple-darwin,aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
       - name: Build macOS
-        working-directory: locks/native
+        working-directory: async_lock/native
         run: |
           cargo build --release --target x86_64-apple-darwin
           cargo build --release --target aarch64-apple-darwin
       - name: Build iOS
-        working-directory: locks/native
+        working-directory: async_lock/native
         run: |
           cargo build --release --target aarch64-apple-ios
           cargo build --release --target aarch64-apple-ios-sim
           cargo build --release --target x86_64-apple-ios
       - name: Copy libraries
-        working-directory: locks/native
+        working-directory: async_lock/native
         run: |
           mkdir out
           cp target/x86_64-apple-darwin/release/libdart_locks.dylib out/libdart_locks.macos_x64.dylib
@@ -89,7 +89,7 @@ jobs:
         with:
           name: locks-apple
           retention-days: 1
-          path: locks/native/out
+          path: async_lock/native/out
 
   compile_native_windows:
     runs-on: windows-latest
@@ -99,12 +99,12 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
       - name: Build Windows
-        working-directory: locks/native
+        working-directory: async_lock/native
         run: |
           cargo build --release --target x86_64-pc-windows-msvc
           cargo build --release --target aarch64-pc-windows-msvc
       - name: Copy libraries
-        working-directory: locks/native
+        working-directory: async_lock/native
         run: |
           mkdir out
           cp target/x86_64-pc-windows-msvc/release/dart_locks.dll out/dart_locks.win_x64.dll
@@ -113,7 +113,7 @@ jobs:
         with:
           name: locks-windows
           retention-days: 1
-          path: locks/native/out
+          path: async_lock/native/out
 
   setup:
     runs-on: ubuntu-latest
@@ -131,7 +131,7 @@ jobs:
           path: |
             ${{ env.PUB_CACHE }}
             shelf_multipart/pubspec.lock
-            locks/pubspec.lock
+            async_lock/pubspec.lock
           # We can only use fallback keys here since we don't know the lockfile contents yet.
           key: dart-packages-stub
           restore-keys: |
@@ -146,7 +146,7 @@ jobs:
           pushd shelf_multipart
           dart pub upgrade
           popd
-          pushd locks
+          pushd async_lock
           dart pub upgrade
           popd
       - name: "Hash pubspec lockfiles after pub upgrade"
@@ -161,7 +161,7 @@ jobs:
           path: |
             ${{ env.PUB_CACHE }}
             shelf_multipart/pubspec.lock
-            locks/pubspec.lock
+            async_lock/pubspec.lock
           key: dart-packages-${{ steps.deps-after.outputs.lockfiles }}
 
   shelf_multipart:
@@ -192,12 +192,12 @@ jobs:
       - name: Run tests
         run: dart test
 
-  locks:
+  async_lock:
     runs-on: ubuntu-latest
     needs: setup
     defaults:
       run:
-        working-directory: locks
+        working-directory: async_lock
 
     steps:
       - uses: actions/checkout@v4
@@ -208,7 +208,7 @@ jobs:
         with:
           path: |
             ${{ env.PUB_CACHE }}
-            locks/pubspec.lock
+            async_lock/pubspec.lock
           key: ${{ needs.setup.outputs.cache-key }}
           fail-on-cache-miss: false #true
       - name: Install dependencies

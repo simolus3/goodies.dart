@@ -4,7 +4,7 @@ library;
 import 'dart:isolate';
 import 'dart:math';
 
-import 'package:locks/locks.dart';
+import 'package:async_lock/async_lock.dart';
 import 'package:test/test.dart';
 
 void main() {

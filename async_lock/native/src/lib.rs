@@ -33,7 +33,7 @@ struct RequestSnapshot {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn pkg_locks_client(
+pub extern "C" fn pkg_async_lock_client(
     name_length: isize,
     name: *const u8,
     api: *mut c_void,
@@ -49,12 +49,12 @@ pub extern "C" fn pkg_locks_client(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn pkg_locks_free_client(ptr: *const c_void) {
+pub extern "C" fn pkg_async_lock_free_client(ptr: *const c_void) {
     drop(unsafe { Arc::from_raw(ptr.cast::<LockClient>()) });
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn pkg_locks_obtain(
+pub extern "C" fn pkg_async_lock_obtain(
     name_length: isize,
     name: *const u8,
     client: *const c_void,
@@ -89,13 +89,13 @@ pub extern "C" fn pkg_locks_obtain(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn pkg_locks_unlock(ptr: *mut LockRequest) {
+pub extern "C" fn pkg_async_lock_unlock(ptr: *mut LockRequest) {
     let request = unsafe { Arc::from_raw(ptr) };
     LOCKS.close_request(request);
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn pkg_locks_snapshot(client: *const c_void, port: DartPort) {
+pub extern "C" fn pkg_async_lock_snapshot(client: *const c_void, port: DartPort) {
     let mut descriptions = Vec::<RequestSnapshot>::new();
     LOCKS.inspect(|state| {
         state.snapshot_into(&mut descriptions);

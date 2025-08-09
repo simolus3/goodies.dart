@@ -1,4 +1,4 @@
-import 'package:locks/locks.dart';
+import 'package:async_lock/async_lock.dart';
 
 void main() async {
   final lockName = 'my-lock';
