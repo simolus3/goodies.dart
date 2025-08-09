@@ -8,3 +8,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 lazy_static = "1.5.0"
+
+[profile.release]
+panic = "abort"
+opt-level = "z"
+lto = true

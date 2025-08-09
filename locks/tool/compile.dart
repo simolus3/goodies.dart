@@ -56,8 +56,8 @@ enum Target {
   linux([
     'aarch64-unknown-linux-gnu',
     'x86_64-unknown-linux-gnu',
-    'armv7-unknown-linux-gnueabihf',
     'riscv64gc-unknown-linux-gnu',
+    // 'armv7-unknown-linux-gnueabihf',
   ]),
   windows(['x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc']);
 
