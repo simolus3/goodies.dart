@@ -40,7 +40,7 @@ void main(List<String> args) async {
           yield entry.path;
         }
       });
-      output.addDependencies(dependencies.map((p) => Uri.file(p)));
+      output.dependencies.addAll(dependencies.map((p) => Uri.file(p)));
     }
 
     final localBuild = input.userDefines['local_build'] == true;
