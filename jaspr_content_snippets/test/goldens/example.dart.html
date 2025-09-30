@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base href="/"/>
+    <meta charset="utf-8"/>
+    <style>
+      .keyword {
+        color: blue;
+      }
+    </style>
+    <style>
+      .type {
+        color: red;
+      }
+    </style>
+    <style>
+      .class {
+        color: darkRed;
+      }
+    </style>
+    <style>
+      .property {
+        color: darkGreen;
+      }
+    </style>
+    <style>
+      .function {
+        color: yellowGreen;
+      }
+    </style>
+    <style>
+      .method {
+        color: yellowGreen;
+      }
+    </style>
+    <style>
+      .variable {
+        color: green;
+      }
+    </style>
+    <style>
+      .parameter {
+        color: green;
+      }
+    </style>
+    <style>
+      .string {
+        color: cyan;
+      }
+    </style>
+    <style>
+      .number {
+        color: darkCyan;
+      }
+    </style>
+    <style>
+      .annotation {
+        color: lightGreen;
+      }
+    </style>
+    <style>
+      .declaration {
+        font-weight: bold;
+      }
+    </style>
+    <!--$-->
+    <title>test/goldens/example.dart</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <!--/-->
+  </head>
+  <body>
+    <div>
+      <h2>(full)</h2>
+      <code>
+        <pre><span><span class="keyword">import</span> <span class="string">'dart:async'</span>;
+
+<span class="keyword">import</span> <span class="string"><a href="https://pub.dev/documentation/build/latest/build/build-library.html">'package:build/build.dart'</a></span>;
+
+<span class="keyword">final</span> <span class="keyword">class</span> <span class="class declaration">ExampleBuilder</span> <span class="keyword">extends</span> <span class="class"><a href="https://pub.dev/documentation/build/latest/build/Builder-class.html">Builder</a></span> {
+  <span class="annotation">@</span><span class="property annotation">override</span>
+  <span class="class">Map</span>&lt;<span class="class">String</span>, <span class="class">List</span>&lt;<span class="class">String</span>&gt;&gt; <span class="keyword">get</span> <span class="property declaration instance">buildExtensions</span> =&gt; <span class="keyword">const</span> {
+    <span class="string">'.dart'</span>: [<span class="string">'.snippets'</span>],
+  };
+
+  <span class="annotation">@</span><span class="property annotation">override</span>
+  <span class="class">FutureOr</span>&lt;<span class="keyword void">void</span>&gt; <span class="method declaration instance">build</span>(<span class="class"><a href="https://pub.dev/documentation/build/latest/build/BuildStep-class.html">BuildStep</a></span> <span class="parameter declaration">buildStep</span>) {
+    <span class="keyword control">throw</span> <span class="class constructor">UnimplementedError</span>();
+  }
+
+}
+</span></pre>
+      </code>
+      <hr/>
+    </div>
+    <div>
+      <h2>outline</h2>
+      <code>
+        <pre><span><span class="keyword">final</span> <span class="keyword">class</span> <span class="class declaration">ExampleBuilder</span> <span class="keyword">extends</span> <span class="class"><a href="https://pub.dev/documentation/build/latest/build/Builder-class.html">Builder</a></span> {
+}
+</span></pre>
+      </code>
+      <hr/>
+    </div>
+    <div>
+      <h2>buildExtensions</h2>
+      <code>
+        <pre><span>  <span class="annotation">@</span><span class="property annotation">override</span>
+  <span class="class">Map</span>&lt;<span class="class">String</span>, <span class="class">List</span>&lt;<span class="class">String</span>&gt;&gt; <span class="keyword">get</span> <span class="property declaration instance">buildExtensions</span> =&gt; <span class="keyword">const</span> {
+    <span class="string">'.dart'</span>: [<span class="string">'.snippets'</span>],
+  };</span></pre>
+      </code>
+      <hr/>
+    </div>
+    <div>
+      <h2>build</h2>
+      <code>
+        <pre><span>  <span class="annotation">@</span><span class="property annotation">override</span>
+  <span class="class">FutureOr</span>&lt;<span class="keyword void">void</span>&gt; <span class="method declaration instance">build</span>(<span class="class"><a href="https://pub.dev/documentation/build/latest/build/BuildStep-class.html">BuildStep</a></span> <span class="parameter declaration">buildStep</span>) {
+    <span class="keyword control">throw</span> <span class="class constructor">UnimplementedError</span>();
+  }
+</span></pre>
+      </code>
+      <hr/>
+    </div>
+  </body>
+</html>
