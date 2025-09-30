@@ -3,12 +3,10 @@ import 'dart:math';
 import 'package:jaspr/jaspr.dart';
 import 'package:jaspr/jaspr.dart' as jaspr;
 import 'package:source_span/source_span.dart';
-import 'package:syntax_highlight_lite/syntax_highlight_lite.dart' hide Color;
 
 import '../highlight/highlighter.dart';
-import '../highlight/token_type.dart';
-import '../highlighted_excerpt.dart';
 import '../excerpts/excerpt.dart';
+import 'options.dart';
 
 /// Renders an [Excerpt] into a sequence of `<span>` elements.
 ///
@@ -74,7 +72,7 @@ final class ExcerptSpan extends StatelessComponent {
       int stripIndent = 0,
     ]) {
       final docsUri = token.documentationUri;
-      final (classes, styles) = options.mode._classesAndStylesFor(token);
+      final (classes, styles) = options.mode.classesAndStylesFor(token);
 
       var component = createRawTextNode(
         span ?? source.span(token.offset, token.endOffset),
@@ -163,184 +161,5 @@ final class ExcerptSpan extends StatelessComponent {
     // Wrap everything in a span to avoid jaspr adding whitespace:
     // https://docs.jaspr.site/concepts/components#formatting-whitespace
     return span(nodes);
-  }
-}
-
-final class CodeRenderingOptions {
-  /// The original contents of the snippet file.
-  ///
-  /// Since excerpts and highlights only store offsets, this is required to
-  /// efficiently extract lines or spans of texts.
-  final SourceFile file;
-
-  /// All extracted excerpts.
-  final ExtractedExcerpts excerpts;
-
-  /// The name of the excerpt to render.
-  final String name;
-
-  /// How to apply styles (either with inline CSS or by using CSS classes named
-  /// after the semantic token type).
-  final SpanRenderingMode mode;
-
-  /// Whether common indendation should be removed when rendering text.
-  ///
-  /// If enabled, a highlight region like:
-  ///
-  /// ```
-  /// void myFunction() {
-  ///   // #docregion test
-  ///   fun1();
-  ///   fun2();
-  ///   // #enddocregion test
-  /// }
-  /// ```
-  ///
-  /// would be rendered like
-  ///
-  /// ```
-  /// fun1();
-  /// fun2();
-  /// ```
-  ///
-  /// If disabled (the default), it would be rendered as
-  ///
-  /// ```
-  ///  fun1();
-  ///  fun2();
-  /// ```
-  final bool dropIndendation;
-
-  final Component Function(
-    Excerpt excerpt,
-    ContinousRegion last,
-    ContinousRegion upcoming,
-  )
-  writePlaster;
-
-  Excerpt get excerpt =>
-      excerpts.excerpts[name] ??
-      (throw ArgumentError('Unknown excerpt: $name.'));
-
-  CodeRenderingOptions({
-    required this.file,
-    required this.excerpts,
-    required this.name,
-    this.mode = const SpanRenderingMode.cssClasses(),
-    this.dropIndendation = false,
-    this.writePlaster = _defaultPlaster,
-  });
-
-  static Component _defaultPlaster(
-    Excerpt excerpt,
-    ContinousRegion last,
-    ContinousRegion upcoming,
-  ) {
-    return text('\n');
-  }
-}
-
-sealed class SpanRenderingMode {
-  const factory SpanRenderingMode.cssClasses() = _Classes;
-
-  const factory SpanRenderingMode.highlighter(HighlighterTheme theme) =
-      _HighlighterTheme;
-
-  (String?, Styles?) _classesAndStylesFor(HighlightToken token);
-}
-
-final class _Classes implements SpanRenderingMode {
-  const _Classes();
-
-  @override
-  (String?, Styles?) _classesAndStylesFor(HighlightToken token) {
-    final classes = [
-      token.type.toJson(),
-      if (token.modifiers case final modifiers?)
-        for (final modifier in modifiers) modifier.toJson(),
-    ].join(' ');
-
-    return (classes, null);
-  }
-}
-
-final class _HighlighterTheme implements SpanRenderingMode {
-  final HighlighterTheme _theme;
-
-  const _HighlighterTheme(this._theme);
-
-  @override
-  (String?, Styles?) _classesAndStylesFor(HighlightToken token) {
-    // Highlighters from syntax_highlight_lite use the old TextMate scope names
-    // instead of semantic tokens. A mapping is available here: https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#predefined-textmate-scope-mappings
-    String ifHasModifier(
-      SemanticTokenModifiers mod,
-      String withMod,
-      String without,
-    ) {
-      return token.modifiers?.contains(mod) == true ? withMod : without;
-    }
-
-    final legacyScope = switch (token.type) {
-      SemanticTokenTypes.namespace => 'entity.name.namespace',
-      SemanticTokenTypes.type => ifHasModifier(
-        SemanticTokenModifiers.defaultLibrary,
-        'support.type',
-        'entity.name.type',
-      ),
-      SemanticTokenTypes.struct => 'storage.type.struct',
-      SemanticTokenTypes.class_ => ifHasModifier(
-        SemanticTokenModifiers.defaultLibrary,
-        'support.class',
-        'entity.name.type.clas',
-      ),
-      SemanticTokenTypes.interface => 'entity.name.type.interface',
-      SemanticTokenTypes.enum_ => 'entity.name.type.enum',
-      SemanticTokenTypes.function => ifHasModifier(
-        SemanticTokenModifiers.defaultLibrary,
-        'support.function',
-        'entity.name.function',
-      ),
-      SemanticTokenTypes.method => 'entity.name.function.member',
-      SemanticTokenTypes.macro => 'entity.name.function.preprocessor',
-      SemanticTokenTypes.variable => ifHasModifier(
-        SemanticTokenModifiers.readonly,
-        'variable.other.constant',
-        ifHasModifier(
-          SemanticTokenModifiers.defaultLibrary,
-          'support.constant',
-          'variable.other.readwrite',
-        ),
-      ),
-      SemanticTokenTypes.parameter => 'variable.parameter',
-      SemanticTokenTypes.property => ifHasModifier(
-        SemanticTokenModifiers.readonly,
-        'variable.other.property',
-        'variable.other.property',
-      ),
-      SemanticTokenTypes.enumMember => 'variable.other.enummember',
-      SemanticTokenTypes.event => 'variable.other.event',
-
-      _ => '',
-    };
-
-    Styles highlightStyleToJaspr(TextStyle style) {
-      return Styles(
-        color: Color.value(style.foreground.argb & 0x00FFFFFF),
-        fontWeight: style.bold ? FontWeight.bold : null,
-        fontStyle: style.italic ? FontStyle.italic : null,
-        textDecoration: style.underline
-            ? TextDecoration(line: TextDecorationLine.underline)
-            : null,
-      );
-    }
-
-    for (final scope in legacyScope.split('.').reversed) {
-      if (_theme.scopes[scope] case final style?) {
-        return (null, highlightStyleToJaspr(style));
-      }
-    }
-
-    return (null, null);
   }
 }

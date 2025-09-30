@@ -1,0 +1,124 @@
+diff --git b/jaspr_content_snippets/lib/src/highlight/dart/computer_highlights.dart a/jaspr_content_snippets/lib/src/highlight/dart/computer_highlights.dart
+index 527e2e5..a83e903 100644
+--- b/jaspr_content_snippets/lib/src/highlight/dart/computer_highlights.dart
++++ a/jaspr_content_snippets/lib/src/highlight/dart/computer_highlights.dart
+@@ -11,14 +11,6 @@ import 'dart:math' as math;
+ import 'package:_fe_analyzer_shared/src/parser/quote.dart'
+     show analyzeQuote, Quote, firstQuoteLength, lastQuoteLength;
+ import 'package:_fe_analyzer_shared/src/scanner/characters.dart' as char;
+-import 'package:analysis_server/lsp_protocol/protocol.dart'
+-    show SemanticTokenTypes, SemanticTokenModifiers;
+-import 'package:analysis_server/src/lsp/constants.dart'
+-    show CustomSemanticTokenModifiers, CustomSemanticTokenTypes;
+-import 'package:analysis_server/src/lsp/semantic_tokens/encoder.dart'
+-    show SemanticTokenInfo;
+-import 'package:analysis_server/src/lsp/semantic_tokens/mapping.dart'
+-    show highlightRegionTokenModifiers, highlightRegionTokenTypes;
+ import 'package:analyzer/dart/ast/ast.dart';
+ import 'package:analyzer/dart/ast/token.dart';
+ import 'package:analyzer/dart/ast/visitor.dart';
+@@ -31,14 +23,20 @@ import 'package:analyzer/src/dart/element/extensions.dart';
+ import 'package:analyzer/src/utilities/extensions/ast.dart';
+ import 'package:analyzer_plugin/protocol/protocol_common.dart' hide Element;
+ 
++import '../token_type.dart';
++import '../highlighter.dart';
++import 'element_references.dart';
++import 'mapping.dart';
++
++typedef SemanticTokenInfo = HighlightToken;
++
+ /// A computer for [HighlightRegion]s and LSP [SemanticTokenInfo] in a Dart [CompilationUnit].
+ class DartUnitHighlightsComputer {
+   final CompilationUnit _unit;
+   final SourceRange? range;
+ 
+-  final _regions = <HighlightRegion>[];
+   final _semanticTokens = <SemanticTokenInfo>[];
+-  bool _computeRegions = false;
++  final referencedElements = ElementReferences();
+   bool _computeSemanticTokens = false;
+ 
+   /// Creates a computer for [HighlightRegion]s and LSP [SemanticTokenInfo] in a
+@@ -48,15 +46,6 @@ class DartUnitHighlightsComputer {
+   /// in results.
+   DartUnitHighlightsComputer(this._unit, {this.range});
+ 
+-  /// Returns the computed highlight regions, not `null`.
+-  List<HighlightRegion> compute() {
+-    _reset();
+-    _computeRegions = true;
+-    _unit.accept(_DartUnitHighlightsComputerVisitor(this));
+-    _addCommentRanges();
+-    return _regions;
+-  }
+-
+   /// Returns the computed semantic tokens, not `null`.
+   List<SemanticTokenInfo> computeSemanticTokens() {
+     _reset();
+@@ -105,6 +94,10 @@ class DartUnitHighlightsComputer {
+     required Token nameToken,
+     required Element? element,
+   }) {
++    if (element != null) {
++      referencedElements.trackElement(nameToken, element);
++    }
++
+     if (_addIdentifierRegion_keyword(nameToken)) {
+       return;
+     }
+@@ -561,9 +554,7 @@ class DartUnitHighlightsComputer {
+         return;
+       }
+     }
+-    if (_computeRegions) {
+-      _regions.add(HighlightRegion(type, offset, length));
+-    }
++
+     if (_computeSemanticTokens) {
+       // Use default mappings if an overridden type/modifiers were not supplied.
+       semanticTokenType ??= highlightRegionTokenTypes[type];
+@@ -578,11 +569,11 @@ class DartUnitHighlightsComputer {
+       }
+       if (semanticTokenType != null) {
+         _semanticTokens.add(
+-          SemanticTokenInfo(
+-            offset,
+-            length,
+-            semanticTokenType,
+-            semanticTokenModifiers,
++          HighlightToken(
++            offset: offset,
++            length: length,
++            type: semanticTokenType,
++            modifiers: semanticTokenModifiers,
+           ),
+         );
+       }
+@@ -595,6 +586,16 @@ class DartUnitHighlightsComputer {
+     SemanticTokenTypes? semanticTokenType,
+     Set<SemanticTokenModifiers>? semanticTokenModifiers,
+   }) {
++    final (stringLiteral, element) = switch (node) {
++      ImportDirective() => (node.uri, node.libraryImport?.importedLibrary),
++      ExportDirective() => (node.uri, node.libraryExport?.exportedLibrary),
++      _ => (null, null),
++    };
++
++    if (stringLiteral != null && element != null) {
++      referencedElements.trackElement(stringLiteral, element);
++    }
++
+     var offset = node.offset;
+     var length = node.length;
+     _addRegion(
+@@ -661,9 +662,7 @@ class DartUnitHighlightsComputer {
+   }
+ 
+   void _reset() {
+-    _computeRegions = false;
+     _computeSemanticTokens = false;
+-    _regions.clear();
+     _semanticTokens.clear();
+   }
+ 
