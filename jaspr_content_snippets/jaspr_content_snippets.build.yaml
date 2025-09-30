@@ -1,0 +1,49 @@
+# NOTE: Always keep the section up until the other comment in sync with
+# build.yaml.
+# This overrides builders only for this package, allowing us to add the golden
+# builder for testing.
+builders:
+  api_index:
+    import: 'package:jaspr_content_snippets/builders.dart'
+    build_to: cache
+    builder_factories: ['DartIndexBuilder.new']
+    auto_apply: all_packages
+    runs_before: [jaspr_content_snippets]
+    build_extensions: {"lib/lib": ['api.json']}
+
+  jaspr_content_snippets:
+    import: 'package:jaspr_content_snippets/builders.dart'
+    build_to: cache
+    builder_factories: ['excerptsBuilder']
+    auto_apply: none
+    build_extensions: {'': ['.snippet.json']}
+    defaults:
+      options:
+        process_without_directives: false
+# End of section to keep in sync with build.yaml
+
+  goldens:
+    import: 'tool/golden_builder.dart'
+    build_to: source
+    builder_factories: ['GoldenBuilder.new']
+    build_extensions: {'': ['.html']}
+    auto_apply: root_package
+    required_inputs:
+      - '.snippet.json'
+    defaults:
+      generate_for:
+        - test/goldens/**
+
+targets:
+  $default:
+    builders:
+      :jaspr_content_snippets:
+        options:
+          process_without_directives: true
+        generate_for:
+          - test/goldens/**
+
+global_options:
+  ":api_index":
+    options:
+      packages: ['build']

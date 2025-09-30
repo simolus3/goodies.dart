@@ -1,0 +1,12 @@
+import 'foo.bar';
+
+CREATE TABLE users (
+    id INTEGER NOT NULL PRIMARY KEY,
+    best_friend INTEGER REFERENCES users (id),
+    name TEXT NOT NULL
+);
+
+-- #docregion query
+users:
+SELECT * FROM users WHERE name = ?
+-- #enddocregion query
