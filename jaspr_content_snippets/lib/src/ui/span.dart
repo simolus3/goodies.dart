@@ -21,7 +21,7 @@ final class ExcerptSpan extends StatelessComponent {
   @override
   Component build(BuildContext context) {
     final excerpt = options.excerpt;
-    final tokens = options.excerpts.tokens ?? const [];
+    final tokens = options.tokens;
     final source = options.file;
 
     final nodes = <Component>[];
