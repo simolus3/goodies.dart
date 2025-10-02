@@ -5,7 +5,7 @@ builders:
     builder_factories: ['DartIndexBuilder.new']
     auto_apply: all_packages
     runs_before: [jaspr_content_snippets]
-    build_extensions: {"lib/lib": ['api.json']}
+    build_extensions: {"$lib": ['api.json']}
 
   jaspr_content_snippets:
     import: 'package:jaspr_content_snippets/builders.dart'
@@ -16,3 +16,15 @@ builders:
     defaults:
       options:
         process_without_directives: false
+
+  combiner:
+    import: 'package:jaspr_content_snippets/builders.dart'
+    build_to: source
+    builder_factories: ['combiner']
+    auto_apply: root_package
+    required_inputs:
+      - ".snippet.json"
+    build_extensions: {'$package$': ['lib/generated_snippets.dart']}
+    defaults:
+      options:
+        path: lib/generated_snippets.dart

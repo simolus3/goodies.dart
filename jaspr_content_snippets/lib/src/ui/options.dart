@@ -5,7 +5,6 @@ import 'package:syntax_highlight_lite/syntax_highlight_lite.dart' hide Color;
 import '../excerpts/excerpt.dart';
 import '../highlight/highlighter.dart';
 import '../highlight/token_type.dart';
-import '../highlighted_excerpt.dart';
 
 final class UnresolvedRenderingOptions {
   /// How to apply styles (either with inline CSS or by using CSS classes named
@@ -73,13 +72,13 @@ final class UnresolvedRenderingOptions {
 
   CodeRenderingOptions resolveWith(
     SourceFile file,
-    ExtractedExcerpts excerpts,
-    String name,
+    List<HighlightToken>? tokens,
+    Excerpt excerpt,
   ) {
     return CodeRenderingOptions(
       file: file,
-      excerpts: excerpts,
-      name: name,
+      tokens: tokens ?? const [],
+      excerpt: excerpt,
       mode: mode,
       dropIndendation: dropIndendation,
       writePlaster: writePlaster,
@@ -102,20 +101,14 @@ final class CodeRenderingOptions extends UnresolvedRenderingOptions {
   /// efficiently extract lines or spans of texts.
   final SourceFile file;
 
-  /// All extracted excerpts.
-  final ExtractedExcerpts excerpts;
+  final List<HighlightToken> tokens;
 
-  /// The name of the excerpt to render.
-  final String name;
-
-  Excerpt get excerpt =>
-      excerpts.excerpts[name] ??
-      (throw ArgumentError('Unknown excerpt: $name.'));
+  final Excerpt excerpt;
 
   CodeRenderingOptions({
     required this.file,
-    required this.excerpts,
-    required this.name,
+    required this.tokens,
+    required this.excerpt,
     super.mode,
     super.dropIndendation,
     super.writePlaster,

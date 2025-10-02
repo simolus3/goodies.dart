@@ -1,7 +1,7 @@
 # NOTE: Always keep the section up until the other comment in sync with
 # build.yaml.
-# This overrides builders only for this package, allowing us to add the golden
-# builder for testing.
+# This overrides builders only for this package, allowing us to define custom
+# targets only for this package.
 builders:
   api_index:
     import: 'package:jaspr_content_snippets/builders.dart'
@@ -9,7 +9,7 @@ builders:
     builder_factories: ['DartIndexBuilder.new']
     auto_apply: all_packages
     runs_before: [jaspr_content_snippets]
-    build_extensions: {"lib/lib": ['api.json']}
+    build_extensions: {"$lib": ['api.json']}
 
   jaspr_content_snippets:
     import: 'package:jaspr_content_snippets/builders.dart'
@@ -20,19 +20,19 @@ builders:
     defaults:
       options:
         process_without_directives: false
-# End of section to keep in sync with build.yaml
 
-  goldens:
-    import: 'tool/golden_builder.dart'
+  combiner:
+    import: 'package:jaspr_content_snippets/builders.dart'
     build_to: source
-    builder_factories: ['GoldenBuilder.new']
-    build_extensions: {'': ['.html']}
+    builder_factories: ['combiner']
     auto_apply: root_package
     required_inputs:
-      - '.snippet.json'
+      - ".snippet.json"
+    build_extensions: {'$package$': ['lib/generated_snippets.dart']}
     defaults:
-      generate_for:
-        - test/goldens/**
+      options:
+        path: lib/generated_snippets.dart
+# End of section to keep in sync with build.yaml
 
 targets:
   $default:
@@ -42,6 +42,10 @@ targets:
           process_without_directives: true
         generate_for:
           - test/goldens/**
+      :combiner:
+        enabled: true
+        options:
+          path: test/goldens/generated_goldens.dart
 
 global_options:
   ":api_index":
