@@ -1,3 +1,4 @@
+// dart format off
 final generatedSnippets = {
 'test/goldens/file.drift.snippet.json': {'(full)': r'''<span><span class="keyword">import</span> <span class="string">'foo.bar'</span>;
 
