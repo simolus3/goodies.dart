@@ -134,6 +134,7 @@ jobs:
             ${{ env.PUB_CACHE }}
             shelf_multipart/pubspec.lock
             weblocks/pubspec.lock
+            jaspr_content_snippets/pubspec.lock
           # We can only use fallback keys here since we don't know the lockfile contents yet.
           key: dart-packages-stub
           restore-keys: |
@@ -149,6 +150,9 @@ jobs:
           dart pub upgrade
           popd
           pushd weblocks
+          dart pub upgrade
+          popd
+          pushd jaspr_content_snippets
           dart pub upgrade
           popd
       - name: "Hash pubspec lockfiles after pub upgrade"
@@ -228,5 +232,35 @@ jobs:
       - run: find assets
         working-directory: weblocks
 
+      - name: Run tests
+        run: dart test
+
+  jaspr_content_snippets:
+    runs-on: ubuntu-latest
+    needs: setup
+    defaults:
+      run:
+        working-directory: jaspr_content_snippets
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ needs.setup.outputs.dart-version }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ env.PUB_CACHE }}
+            shelf_multipart/pubspec.lock
+          key: ${{ needs.setup.outputs.cache-key }}
+          fail-on-cache-miss: false #true
+      - name: Install dependencies
+        run: dart pub get # --offline
+      - name: Run builder
+        run: dart run build_runner build -d
+      - name: Verify format
+        run: dart format --output=none --set-exit-if-changed .
+      - name: Analyze project
+        run: dart analyze --fatal-infos
       - name: Run tests
         run: dart test
