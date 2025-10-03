@@ -6,12 +6,22 @@ import 'package:path/path.dart' show url;
 
 import 'export_canonicalization.dart';
 
+/// An identifier for a top-level (as in, child of a [LibraryElement]) Dart
+/// element.
+///
+/// Since these identifiers are serializable and easy to compute given the
+/// [Element], they are used as keys for a generated index storing which element
+/// is exported by each public (non-`src/`) library of a package.
 final class ElementIdentifier {
+  /// The asset id of the source library defining the element.
   final Uri definedSource;
+
+  /// The offset of the element in its source file.
   final int offsetInSource;
 
   ElementIdentifier(this.definedSource, this.offsetInSource);
 
+  /// Obtains the [ElementIdentifier] for an analyzed [Element].
   static ElementIdentifier? fromElement(Element element) {
     final uri = element.library?.uri;
     if (uri == null) {
@@ -53,11 +63,32 @@ final class ElementIdentifier {
   }
 }
 
+/// A public Dart library exported by a package.
+///
+/// We consider all libraries that aren't defined in `src/` to be public.
 final class PublicLibrary {
+  /// The asset id of the file defining the library.
   final AssetId id;
+
+  /// All elements in the export namespace of the library.
   final List<ElementIdentifier> exportedElements;
+
+  /// The name `dart doc` uses for this library.
+  ///
+  /// This depends on a `library` directive, if there is one. Otherwise, it's
+  /// derived from the name of the source file.
+  ///
+  /// This is used to resolve the "primary" library for a given
+  /// [ElementIdentifier] if it's exported by multiple libraries.
   final String dartDocName;
+
+  /// The path under which `dart doc` would generate documentation for this
+  /// library.
   final String dirName;
+
+  /// Whether the library has a `@deprecated` annotation on it.
+  ///
+  /// This affects the primary url
   final bool isDeprecated;
 
   PublicLibrary._(
@@ -81,6 +112,9 @@ final class PublicLibrary {
     );
   }
 
+  /// Resolves a [PublicLibrary] from its [AssetId] and resolved
+  /// [LibraryElement] by iterating through its
+  /// [LibraryElement.exportNamespace].
   factory PublicLibrary(AssetId id, LibraryElement element) {
     final exportedHere = <ElementIdentifier>[];
 
@@ -164,6 +198,7 @@ final class PublicLibrary {
   }
 }
 
+/// A lazily-loaded index mapping Dart elements to their `dart doc` pages.
 class DartIndex {
   static final _resource = Resource(DartIndex.new);
 

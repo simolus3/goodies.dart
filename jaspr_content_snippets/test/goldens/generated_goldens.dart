@@ -1,5 +1,5 @@
 final generatedSnippets = {
-'jaspr_content_snippets|test/goldens/file.drift.snippet.json': {'(full)': r'''<span><span class="keyword">import</span> <span class="string">'foo.bar'</span>;
+'test/goldens/file.drift.snippet.json': {'(full)': r'''<span><span class="keyword">import</span> <span class="string">'foo.bar'</span>;
 
 <span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="class declaration">users</span> (
     <span class="property">id</span> <span class="type">INTEGER</span> <span class="keyword">NOT</span> <span class="keyword">NULL</span> <span class="keyword">PRIMARY</span> <span class="keyword">KEY</span>,
@@ -12,12 +12,17 @@ final generatedSnippets = {
 ''','query': r'''<span><span class="function declaration">users</span>:
 <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="class">users</span> <span class="keyword">WHERE</span> <span class="property">name</span> = <span class="variable">?</span></span>
 ''',},
-'jaspr_content_snippets|test/goldens/stmt.sql.snippet.json': {'(full)': r'''<span><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="class declaration">users</span> (
+'test/goldens/no_tokens.txt.snippet.json': {'(full)': r'''<span>a
+
+rest of file</span>
+''','a': r'''<span>a</span>
+''',},
+'test/goldens/stmt.sql.snippet.json': {'(full)': r'''<span><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="class declaration">users</span> (
     <span class="property">id</span> <span class="type">INTEGER</span> <span class="keyword">NOT</span> <span class="keyword">NULL</span> <span class="keyword">PRIMARY</span> <span class="keyword">KEY</span> <span class="keyword">AUTOINCREMENT</span>,
     <span class="property">name</span> <span class="type">TEXT</span> <span class="keyword">NOT</span> <span class="keyword">NULL</span>
 );</span>
 ''',},
-'jaspr_content_snippets|test/goldens/example.dart.snippet.json': {'(full)': r'''<span><span class="keyword">import</span> <span class="string">'dart:async'</span>;
+'test/goldens/example.dart.snippet.json': {'(full)': r'''<span><span class="keyword">import</span> <span class="string">'dart:async'</span>;
 
 <span class="keyword">import</span> <span class="string"><a href="https://pub.dev/documentation/build/latest/build/build-library.html">'package:build/build.dart'</a></span>;
 

@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:build/build.dart';
 import 'package:jaspr/server.dart';
 import 'package:shelf/shelf_io.dart';
 import 'package:path/path.dart';
@@ -26,13 +25,9 @@ void main() {
             body: ul([
               for (final file in generatedSnippets.keys)
                 li([
-                  a(
-                    href: url.relative(
-                      AssetId.parse(file).path,
-                      from: 'test/goldens/',
-                    ),
-                    [text(file)],
-                  ),
+                  a(href: url.relative(file, from: 'test/goldens/'), [
+                    text(file),
+                  ]),
                 ]),
             ]),
           ),
@@ -44,8 +39,7 @@ void main() {
         );
       }
 
-      final goldens =
-          generatedSnippets['jaspr_content_snippets|test/goldens/${request.url.path}'];
+      final goldens = generatedSnippets['test/goldens/${request.url.path}'];
       if (goldens == null) {
         return Response(404);
       }

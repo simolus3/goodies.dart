@@ -4,6 +4,8 @@ import 'package:build/build.dart';
 import '../highlighter.dart';
 import 'computer_highlights.dart';
 
+/// A highlighter for Dart sources, using highlighting code extracted from the
+/// analysis server running against build resolvers.
 final class DartHighlighter implements Highlighter {
   final BuildStep buildStep;
 

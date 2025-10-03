@@ -5,19 +5,38 @@ import 'package:build/build.dart';
 
 import 'token_type.dart';
 
+/// Generates a list of tokens representing highlighted regions in a source
+/// file.
 abstract interface class Highlighter {
+  /// Loads or resolves the source file under [id] to obtain a list of
+  /// highlighting tokens.
+  ///
+  /// Tokens are allowed to be unordered and overlapping - they will be
+  /// normalized later.
   Future<List<HighlightToken>> highlight(AssetId id);
 }
 
+/// A single token found in a source file.
 final class HighlightToken {
+  /// The offset (in characters) representing the start of this token.
   final int offset;
+
+  /// The length of the token, in characters.
   final int length;
+
+  /// The type of this token as specified by the language server protocol.
   final SemanticTokenTypes type;
+
+  /// Optional subtypes allowed by LSP.
   final Set<SemanticTokenModifiers>? modifiers;
 
-  Uri? viewableDefinition;
+  /// Especially for identifier tokens, some highlighters can provide a link to
+  /// e.g. a `dart doc`-generated site providing further references.
+  ///
+  /// For these tokens, this uri would point to that reference page.
   Uri? documentationUri;
 
+  /// The (exclusive) end offset of this token.
   int get endOffset => offset + length;
 
   HighlightToken({
@@ -25,7 +44,6 @@ final class HighlightToken {
     required this.length,
     required this.type,
     this.modifiers,
-    this.viewableDefinition,
     this.documentationUri,
   });
 
@@ -41,10 +59,7 @@ final class HighlightToken {
             SemanticTokenModifiers.fromJson(modifier as String),
         },
       },
-      viewableDefinition: switch (json['s']) {
-        null => null,
-        final s as String => Uri.parse(s),
-      },
+
       documentationUri: switch (json['d']) {
         null => null,
         final d as String => Uri.parse(d),
@@ -58,7 +73,6 @@ final class HighlightToken {
       'l': length,
       't': type.toJson(),
       'm': modifiers?.map((e) => e.toJson()).toList(),
-      's': viewableDefinition?.toString(),
       'd': documentationUri?.toString(),
     };
   }
@@ -137,7 +151,6 @@ final class HighlightToken {
             type: last.type,
             modifiers: last.modifiers,
             documentationUri: last.documentationUri,
-            viewableDefinition: last.viewableDefinition,
           );
           fromOffset = end;
         }
