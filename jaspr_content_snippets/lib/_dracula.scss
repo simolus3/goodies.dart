@@ -1,0 +1,31 @@
+// Taken from https://draculatheme.com/spec, with a minor modification for variables.
+
+@mixin light {
+  --code-bg: #FFFBEB;
+  --code-fg: #1F1F1F;
+  --code-select: #CFCFDE;
+  --code-var: hsl(49deg, 30%, 20%);
+  --code-comment: #6C664B;
+  --code-red: #CB3A2A;
+  --code-orange: #A34D14;
+  --code-yellow: #846E15;
+  --code-green: #14710A;
+  --code-cyan: #036A96;
+  --code-purple: #644AC9;
+  --code-pink: #A3144D;
+}
+
+@mixin dark {
+  --code-bg: #282A36;
+  --code-fg: #F8F8F2;
+  --code-select: #44475A;
+  --code-var: hsl(60deg, 20%, 70%);
+  --code-comment: #6272A4;
+  --code-red: #FF5555;
+  --code-orange: #FFB86C;
+  --code-yellow: #F1FA8C;
+  --code-green: #50FA7B;
+  --code-cyan: #8BE9FD;
+  --code-purple: #BD93F9;
+  --code-pink: #FF79C6;
+}

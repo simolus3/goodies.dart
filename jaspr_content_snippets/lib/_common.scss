@@ -1,0 +1,74 @@
+.code-block {
+  position: relative;
+  button {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    opacity: 0;
+    background: transparent;
+    border: none;
+    color: var(--code-fg);
+    width: 1.25rem;
+    height: 1.25rem;
+    z-index: 10;
+  }
+
+  &:hover button {
+    opacity: 0.75;
+  }
+
+  code {
+    background-color: var(--code-bg);
+    color: var(--code-fg);
+  }
+
+  code::selection {
+    background-color: var(--code-select);
+  }
+
+  // Unused styles: .decorator, .event, .modifier, .operator
+
+  .class,.type,.enum,.struct,.interface,.macro,.typeParameter {
+    color: var(--code-purple);
+
+    &.declaration {
+      font-weight: bold;
+    }
+  }
+
+  .property,.enumMember {
+    color: var(--code-purple);
+  }
+
+  .method,.function {
+    color: var(--code-yellow);
+    &.declaration {
+      font-weight: bold;
+    }
+  }
+
+  .variable,.parameter {
+    color: var(--code-var);
+  }
+
+  .number {
+    color: var(--code-orange);
+  }
+
+  .string {
+    color: var(--code-green);
+  }
+
+  .keyword {
+    color: var(--code-pink);
+  }
+
+  .comment {
+    color: var(--code-comment);
+  }
+
+  a {
+    color: inherit;
+    text-decoration: underline dashed;
+  }
+}
