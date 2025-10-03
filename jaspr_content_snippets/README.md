@@ -143,6 +143,27 @@ This package embeds parts of `analysis_server` source code from the SDK.
 That code imports internal `analyzer` and `_fe_analyzer_shared` APIs making this package somewhat
 unstable.
 
+### Styling
+
+This package does not use `@style` annotations, nor does it ship with default styles for code
+highlighting.
+To get started quickly, consider adding this to your project's style:
+
+```scss
+@use "package:jaspr_content_snippets/common";
+@use "package:jaspr_content_snippets/dracula" as dracula;
+
+:root {
+  @include dracula.light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    @include dracula.dark;
+  }
+}
+```
+
 ### Updating analyzer sources
 
 The `lib/src/highlight/dart/computer_highlights.dart` file is taken from the [Dart SDK](https://github.com/dart-lang/sdk/blob/main/pkg/analysis_server/lib/src/computer/computer_highlights.dart),
