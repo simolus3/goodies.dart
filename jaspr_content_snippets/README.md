@@ -16,6 +16,8 @@ supposed to do.
 Then, you use a custom component provided by this package to show highlighted
 code.
 
+A rendered demo of this package is available on [my website](https://www.simonbinder.eu/posts/built_snippets/).
+
 ## Features
 
 This package can generate excerpts from snippets for all languages and leave

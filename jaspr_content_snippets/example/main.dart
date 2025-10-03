@@ -1,3 +1,4 @@
+// A rendered demo is also available at https://www.simonbinder.eu/posts/built_snippets/
 import 'dart:io';
 
 // #docregion main
