@@ -6,6 +6,8 @@ import '../../dartdoc/dart_index.dart';
 import '../../dartdoc/uris.dart';
 import '../highlighter.dart';
 
+/// For identifier tokens fond by the highlights computer, asynchronously
+/// resolves suitable `dart doc` links.
 final class ElementReferences {
   final _pending = <_PendingElementReference>[];
 

@@ -59,10 +59,10 @@ The `process_without_directives` disables this rule.
 
 This package exports three steps, some of which are optional:
 
-1. You can mark some packages as targets for links when their APIs are used in
+1. Mark some packages as targets for links when their APIs are used in
    snippets.
-2. You enable the snippets builder to extract snippets.
-3. You use a jaspr component to render snippets.
+2. Enable the snippets builder to extract snippets.
+3. Use a jaspr component to render snippets.
 
 These steps are fairly modular, so you can replace them with your own logic
 where that makes sense.
@@ -74,7 +74,7 @@ the `jaspr_content_snippets:api_index` builder to include those packages. Since
 that builder runs on all packages, it's easier to configure it with a
 `global_options` entry in `build.yaml`:
 
-```
+```yaml
 global_options:
   "jaspr_content_snippets:api_index":
     options:
@@ -90,8 +90,7 @@ The snippets builder will, for each source file it's running on, generate a
 2. If the language is known (SQL and Dart are built-in to this package), tokens
    encoded as `(offset, length)` keys with their semantic token identifier as
    specified in the LSP protocol.
-3. You can also read and act on these snippets manually with
-   `ExtractedExcerpts.fromJson()`.
+3. Raw HTML consisting of `<span>`s for known tokens.
 
 To generate the snippets, enable the builder:
 
@@ -109,20 +108,44 @@ targets:
 
 ### Rendering snippets
 
-If you've loaded the `.snippet.json` file manually, you can use the
-`ExcerptSpan` component in jaspr to render it as a series of `<span>` elements.
-You would be responsible for wrapping that in a `<code><pre>` block and
-applying styles.
+Loading extracted snippets is somewhat tricky, since they're generated as
+hidden build files.
 
-Loading the snippets is somewhat tricky, since they're generated as hidden
-build files.
-For this package, I'm running [a builder](./tool/golden_builder.dart) that pre-
-renders them as HTML, another option could be to write a builder that
-generates the internal JSONs as a Dart file that could be imported in
-components.
+This package offers the `jaspr_content_snippets:combiner` builder generating a
+single `generated_snippets.dart` file encoding all snippets.
+The target path of that file can be customized:
+
+```yaml
+targets:
+  $default:
+    builders:
+      jaspr_content_snippets:combiner:
+        options:
+          path: lib/generated_snippets.dart
+```
+
+This file can then be used in a `jaspr_content` pipeline by registering it as a custom
+component:
+
+```dart
+components: [
+  // ...
+  renderedSnippetComponent(snippets: generatedSnippets),
+],
+```
+
+With that set up, you can use the `<Snippet href="/lib/src/your_snippet.dart" name="region" />`
+tag to reference a snippet.
 
 ## Additional information
 
 This package embeds parts of `analysis_server` source code from the SDK.
 That code imports internal `analyzer` and `_fe_analyzer_shared` APIs making this package somewhat
 unstable.
+
+### Updating analyzer sources
+
+The `lib/src/highlight/dart/computer_highlights.dart` file is taken from the [Dart SDK](https://github.com/dart-lang/sdk/blob/main/pkg/analysis_server/lib/src/computer/computer_highlights.dart),
+with some patches related to this package.
+
+To update that file, copy it over and `git apply assets/computer_highlights.patch`.

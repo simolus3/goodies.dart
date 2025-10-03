@@ -1,0 +1,5 @@
+// #docregion a
+a
+// #enddocregion a
+
+rest of file

@@ -8,7 +8,13 @@ import 'package:pub_semver/pub_semver.dart';
 
 import '../highlighted_excerpt.dart';
 
+/// Generates a single Dart file containing string literals for generated
+/// highlighting code across all snippets in a package.
+///
+/// This file is then imported by a custom `jaspr_content` component to render
+/// highlights.
 final class Combiner extends Builder {
+  /// The target path for the generated Dart file.
   final String outputPath;
 
   Combiner(this.outputPath);
@@ -30,7 +36,7 @@ final generatedSnippets = {
         json.decode(await step.readAsString(snippet)),
       );
 
-      buffer.write("'$snippet': {");
+      buffer.write("'${snippet.path}': {");
 
       for (final rendered in excerpt.excerpts) {
         buffer.write("'${rendered.excerpt.name}': r'''${rendered.html}''',");

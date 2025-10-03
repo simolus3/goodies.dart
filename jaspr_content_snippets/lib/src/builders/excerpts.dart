@@ -14,6 +14,7 @@ import '../ui/options.dart';
 import '../ui/span.dart';
 
 base class CodeExcerptBuilder implements Builder {
+  /// Whether to process snippets without any `#docregion` directives.
   final bool allowWithoutDirectives;
 
   CodeExcerptBuilder({required this.allowWithoutDirectives});
@@ -22,6 +23,10 @@ base class CodeExcerptBuilder implements Builder {
     return allowWithoutDirectives || excerpts.containsDirectives;
   }
 
+  /// A highlighter suitable for highlighting files for a [BuildStep].
+  ///
+  /// This uses the extension of the primary input to obtain a highlighter
+  /// instance, or `null` if the file type can't be highlighted.
   Future<Highlighter?> highlighterFor(BuildStep buildStep) async {
     return switch (buildStep.inputId.extension) {
       '.dart' => DartHighlighter(buildStep),
@@ -30,6 +35,10 @@ base class CodeExcerptBuilder implements Builder {
     };
   }
 
+  /// Resolves rendering options for a source file.
+  ///
+  /// This can be used to customize how snippets are rendered, by e.g. using
+  /// inline styles instead of CSS classes.
   Future<UnresolvedRenderingOptions> renderingOptionsFor(
     BuildStep buildStep,
   ) async {

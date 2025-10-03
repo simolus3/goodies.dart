@@ -1,8 +1,16 @@
 diff --git b/jaspr_content_snippets/lib/src/highlight/dart/computer_highlights.dart a/jaspr_content_snippets/lib/src/highlight/dart/computer_highlights.dart
-index 527e2e5..a83e903 100644
---- b/jaspr_content_snippets/lib/src/highlight/dart/computer_highlights.dart
-+++ a/jaspr_content_snippets/lib/src/highlight/dart/computer_highlights.dart
-@@ -11,14 +11,6 @@ import 'dart:math' as math;
+index 527e2e5..7717e50 100644
+--- a/home/simon/src/dart-sdk/sdk/pkg/analysis_server/lib/src/computer/computer_highlights.dart
++++ b/lib/src/highlight/dart/computer_highlights.dart
+@@ -4,21 +4,13 @@
+ 
+ // Many functions here are mostly camelcase, with an occasional underscore to
+ // separate phrases.
+-// ignore_for_file: non_constant_identifier_names
++// ignore_for_file: non_constant_identifier_names, implementation_imports, depend_on_referenced_packages
+ 
+ import 'dart:math' as math;
+ 
  import 'package:_fe_analyzer_shared/src/parser/quote.dart'
      show analyzeQuote, Quote, firstQuoteLength, lastQuoteLength;
  import 'package:_fe_analyzer_shared/src/scanner/characters.dart' as char;

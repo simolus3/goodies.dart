@@ -4,7 +4,7 @@
 
 // Many functions here are mostly camelcase, with an occasional underscore to
 // separate phrases.
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, implementation_imports, depend_on_referenced_packages
 
 import 'dart:math' as math;
 
