@@ -7,6 +7,11 @@ issue_tracker: https://github.com/simolus3/goodies.dart/issues
 environment:
   sdk: ^3.9.0
 
+topics:
+  - jaspr
+  - analyzer
+  - build
+
 dependencies:
   analyzer: ^8.2.0
   analyzer_plugin: ^0.13.8
