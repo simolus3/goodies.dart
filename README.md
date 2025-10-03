@@ -7,3 +7,5 @@ In this repository:
 - __shelf_multipart__, small wrappers to handle multipart and `multipart/form-data` requests in a shelf handler.
 - __weblocks__, a cross-platform implementation of the web locks API. It provides
   asynchronous locks without prior communication across isolates.
+- __jaspr_content_snippets__, a `<Snippet />` tag for [jaspr_content](https://docs.jaspr.site/content) that uses
+  the Dart analyzer to highlight sources and supports deriving snippets from source files.
