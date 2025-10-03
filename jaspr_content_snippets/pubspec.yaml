@@ -13,6 +13,7 @@ topics:
   - build
 
 dependencies:
+  _fe_analyzer_shared: ^89.0.0
   analyzer: ^8.2.0
   analyzer_plugin: ^0.13.8
   build: ^4.0.0
