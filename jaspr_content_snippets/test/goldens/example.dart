@@ -15,6 +15,8 @@ final class ExampleBuilder extends Builder {
   // #docregion build
   @override
   FutureOr<void> build(BuildStep buildStep) {
+    log.info(buildStep.inputId.extension.substring(1));
+
     throw UnimplementedError();
   }
 

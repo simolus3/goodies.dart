@@ -19,36 +19,53 @@ final class ElementIdentifier {
   /// The offset of the element in its source file.
   final int offsetInSource;
 
-  ElementIdentifier(this.definedSource, this.offsetInSource);
+  /// For elements defined in the Dart SDK (which don't have a
+  /// [Fragment.nameOffset] set on them), their name.
+  final String? name;
+
+  ElementIdentifier(this.definedSource, this.offsetInSource, this.name);
 
   /// Obtains the [ElementIdentifier] for an analyzed [Element].
   static ElementIdentifier? fromElement(Element element) {
-    final uri = element.library?.uri;
-    if (uri == null) {
+    final library = element.library;
+    final uri = library?.uri;
+    if (library == null || uri == null) {
       return null;
     }
 
     // Libraries don't necessarily have a name offset, but we still want to be
     // able to link them.
     if (element is LibraryElement) {
-      return ElementIdentifier(uri, -1);
+      return ElementIdentifier(uri, -1, null);
     }
 
     final offset = element.firstFragment.nameOffset;
-    if (offset == null) return null;
+    if (offset == null) {
+      final name = element.name;
+      if (library.isInSdk && name != null) {
+        return ElementIdentifier(uri, 0, element.name);
+      }
 
-    return ElementIdentifier(uri, offset);
+      return null;
+    }
+
+    return ElementIdentifier(uri, offset, null);
   }
 
   factory ElementIdentifier.fromJson(Map<String, Object?> json) {
     return ElementIdentifier(
       Uri.parse(json['source'] as String),
       json['offset'] as int,
+      json['name'] as String?,
     );
   }
 
   Map<String, Object?> toJson() {
-    return {'source': definedSource.toString(), 'offset': offsetInSource};
+    return {
+      'source': definedSource.toString(),
+      'offset': offsetInSource,
+      'name': name,
+    };
   }
 
   @override
@@ -153,6 +170,10 @@ final class PublicLibrary {
   }
 
   static String _computeDirName(LibraryElement element, AssetId id) {
+    if (element.isInSdk) {
+      return element.name!.replaceAll('.', '-');
+    }
+
     // Ported over from https://github.com/dart-lang/dartdoc/blob/e1295863b11c54680bf178ec9c2662a33b0e24be/lib/src/model/library.dart#L164
     final name = element.name;
     String nameFromPath;
@@ -229,32 +250,40 @@ class DartIndex {
     Element element,
     BuildStep buildStep,
   ) async {
-    try {
-      final id = await buildStep.resolver.assetIdForElement(element);
-      await _loadPackage(id.package, buildStep);
-
-      final elementId = ElementIdentifier.fromElement(element);
-      final candidates = _knownImports[elementId];
-      if (elementId == null || candidates == null || candidates.isEmpty) {
+    if (element.library?.isInSdk == true) {
+      await _loadPackage(r'$sdk', buildStep);
+    } else {
+      try {
+        final id = await buildStep.resolver.assetIdForElement(element);
+        await _loadPackage(id.package, buildStep);
+      } on UnresolvableAssetException {
+        // ignore
         return null;
       }
+    }
 
-      if (candidates case [final candidate]) {
-        return candidate;
-      }
-
-      return Canonicalization(elementId).canonicalLibraryCandidate(candidates);
-    } on UnresolvableAssetException {
-      // ignore
+    final elementId = ElementIdentifier.fromElement(element);
+    final candidates = _knownImports[elementId];
+    if (elementId == null || candidates == null || candidates.isEmpty) {
       return null;
     }
+
+    if (candidates case [final candidate]) {
+      return candidate;
+    }
+
+    return Canonicalization(elementId).canonicalLibraryCandidate(candidates);
   }
 
   Future<void> _loadPackage(String package, BuildStep buildStep) async {
+    if (_loadedPackages.contains(package)) {
+      return;
+    }
+
     final index = AssetId(package, 'lib/api.json');
     final indexExists = await buildStep.canRead(index);
 
-    if (!_loadedPackages.contains(package) && indexExists) {
+    if (indexExists) {
       final decl = json.decode(await buildStep.readAsString(index)) as List;
 
       for (final entry in decl) {

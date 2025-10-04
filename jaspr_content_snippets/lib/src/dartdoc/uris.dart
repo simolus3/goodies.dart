@@ -27,6 +27,10 @@ const _operatorNames = {
 };
 
 Uri defaultDocumentationUri(String package, {String version = 'latest'}) {
+  if (package == r'$sdk') {
+    return Uri.parse('https://api.dart.dev');
+  }
+
   return Uri.parse('https://pub.dev/documentation/$package/latest/$version');
 }
 
@@ -49,7 +53,9 @@ Uri documentationForElement(
 
   void buildPath(Element element) {
     if (element is LibraryElement) {
-      reversePath.add('$publicLibrary-library.html');
+      if (!element.isInSdk) {
+        reversePath.add('$publicLibrary-library.html');
+      }
     } else if (element is ClassElement) {
       reversePath.add('${element.name}-class.html');
     } else if (element is EnumElement) {
@@ -86,10 +92,10 @@ Uri documentationForElement(
           buildPathAsParent(field.enclosingElement);
           return;
         }
+      }
 
-        if (field.isConst) {
-          name += '-constant';
-        }
+      if (field.isConst) {
+        name += '-constant';
       }
 
       reversePath.add('$name.html');

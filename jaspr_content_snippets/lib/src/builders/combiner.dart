@@ -25,7 +25,7 @@ final class Combiner extends Builder {
   Future<void> build(BuildStep step) async {
     final buffer = StringBuffer('''
 // dart format off
-final generatedSnippets = {
+const generatedSnippets = {
 ''');
     var hadExcerpt = false;
 
@@ -34,10 +34,13 @@ final generatedSnippets = {
         json.decode(await step.readAsString(snippet)),
       );
 
-      buffer.write("'${snippet.path}': {");
+      buffer.write("${_asDartLiteral(snippet.path)}: {");
 
       for (final rendered in excerpt.excerpts) {
-        buffer.write("'${rendered.excerpt.name}': r'''${rendered.html}''',");
+        buffer.write(
+          "${_asDartLiteral(rendered.excerpt.name)}: ${_asDartLiteral(rendered.html)},",
+        );
+
         hadExcerpt = true;
       }
 
@@ -50,4 +53,18 @@ final generatedSnippets = {
       await step.writeAsString(step.allowedOutputs.single, buffer.toString());
     }
   }
+}
+
+String _asDartLiteral(String value) {
+  final escaped = _escapeForDart(value);
+  return "'$escaped'";
+}
+
+String _escapeForDart(String value) {
+  return value
+      .replaceAll('\\', '\\\\')
+      .replaceAll("'", "\\'")
+      .replaceAll('\$', '\\\$')
+      .replaceAll('\r', '\\r')
+      .replaceAll('\n', '\\n');
 }

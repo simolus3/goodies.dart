@@ -105,4 +105,8 @@ const _styles = '''
 .declaration {
   font-weight: bold;
 }
+
+a {
+  color: inherit;
+}
 ''';

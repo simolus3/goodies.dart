@@ -83,6 +83,9 @@ global_options:
       packages: ['your_package', 'another_one']
 ```
 
+To link to SDK documentation (`api.dart.dev`), include the synthetic `$sdk` package
+in that list.
+
 ### Extracting snippets
 
 The snippets builder will, for each source file it's running on, generate a

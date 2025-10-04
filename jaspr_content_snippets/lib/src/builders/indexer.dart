@@ -13,28 +13,37 @@ import '../dartdoc/dart_index.dart';
 class DartIndexBuilder implements Builder {
   final List<String> packagesToIndex;
 
-  DartIndexBuilder._(this.packagesToIndex);
+  DartIndexBuilder.custom(this.packagesToIndex);
 
   factory DartIndexBuilder(BuilderOptions options) {
     final packages = options.config['packages'] as List?;
 
-    return DartIndexBuilder._(packages?.cast<String>() ?? const []);
+    return DartIndexBuilder.custom(packages?.cast<String>() ?? const []);
   }
 
   @override
   Future<void> build(BuildStep buildStep) async {
+    final package = buildStep.inputId.package;
     if (!packagesToIndex.contains(buildStep.inputId.package)) return;
 
     final output = buildStep.allowedOutputs.single;
-
     final publicLibraries = <PublicLibrary>[];
-    final src = Glob('lib/src/**');
 
-    await for (final input in buildStep.findAssets(Glob('lib/**.dart'))) {
-      if (src.matches(input.path)) continue;
+    if (package == r'$sdk') {
+      await for (final library in buildStep.resolver.libraries) {
+        if (library.name case final name?) {
+          publicLibraries.add(PublicLibrary(AssetId(package, name), library));
+        }
+      }
+    } else {
+      final src = Glob('lib/src/**');
 
-      final library = await buildStep.resolver.libraryFor(input);
-      publicLibraries.add(PublicLibrary(input, library));
+      await for (final input in buildStep.findAssets(Glob('lib/**.dart'))) {
+        if (src.matches(input.path)) continue;
+
+        final library = await buildStep.resolver.libraryFor(input);
+        publicLibraries.add(PublicLibrary(input, library));
+      }
     }
 
     await buildStep.writeAsString(output, json.encode(publicLibraries));
@@ -42,6 +51,6 @@ class DartIndexBuilder implements Builder {
 
   @override
   Map<String, List<String>> get buildExtensions => const {
-    r'$lib$': ['api.json'],
+    r'$package$': ['lib/api.json'],
   };
 }

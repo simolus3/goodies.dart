@@ -9,7 +9,7 @@ builders:
     builder_factories: ['DartIndexBuilder.new']
     auto_apply: all_packages
     runs_before: [jaspr_content_snippets]
-    build_extensions: {"$lib": ['api.json']}
+    build_extensions: {"$package$": ['lib/api.json']}
 
   jaspr_content_snippets:
     import: 'package:jaspr_content_snippets/builders.dart'
@@ -28,6 +28,7 @@ builders:
     auto_apply: root_package
     required_inputs:
       - ".snippet.json"
+      - "api.json"
     build_extensions: {'$package$': ['lib/generated_snippets.dart']}
     defaults:
       options:
@@ -50,4 +51,4 @@ targets:
 global_options:
   ":api_index":
     options:
-      packages: ['build']
+      packages: ['build', '$sdk']
