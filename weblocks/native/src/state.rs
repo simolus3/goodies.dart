@@ -13,16 +13,31 @@ use crate::{
     dart::{DartObject, DartPort},
 };
 
+/// A request to obtain an exclusive or shared lease for a lock.
 pub struct LockRequest {
+    /// The name of the lock being requested.
     pub name: String,
+    /// The client issueing the request.
     pub(crate) client: Arc<LockClient>,
+    /// Whether the lock is requested in shared mode, allowing multiple lock instances at the same
+    /// time.
     pub shared: bool,
+    /// Whether the request should "steal" an existing exclusive grant, if there is one.
+    ///
+    /// This is only supported for exclusive requests, and mutually exclusive with
+    /// [Self::if_available].
     pub steal: bool,
+    /// Whether the grant should only proceed if the lock is not currently locked.
+    ///
+    /// This is mutually exclusive with [Self::steal].
     pub if_available: bool,
+    /// The `SendPort` to send completed, aborted or stolen lock events too.
     pub notify: DartPort,
+    /// The current state of this request as it progresses.
     pub holds_lock: LockRequestState,
 }
 
+/// The state of a currently-referenced lock.
 pub struct LockState {
     pub name: String,
     pending: VecDeque<Arc<LockRequest>>,
@@ -43,6 +58,7 @@ impl LockState {
         }
     }
 
+    /// Processes an incoming [LockRequest].
     pub fn lock(&mut self, request: Arc<LockRequest>) {
         // Loosely based on https://w3c.github.io/web-locks/#algorithm-request-lock.
         if request.steal {
@@ -67,6 +83,10 @@ impl LockState {
         self.process_queue();
     }
 
+    /// Removes a request.
+    ///
+    /// This runs as a native finalizer for a request, ensuring stopped isolates won't cause
+    /// deadlocks.
     pub fn clear_request(&mut self, request: &Arc<LockRequest>) {
         if let Some(ref mut held) = self.held {
             held.entries.retain(|r| !Arc::ptr_eq(r, request));
@@ -83,6 +103,8 @@ impl LockState {
         return self.held.is_none() && self.pending.is_empty();
     }
 
+    /// Creates a snapshot of the current lock state into the [RequestSnapshot], allowing clients
+    /// to inspect lock states.
     pub fn snapshot_into(&self, into: &mut Vec<RequestSnapshot>) {
         let name = Rc::new(CString::new(self.name.clone()).unwrap());
 
@@ -107,6 +129,7 @@ impl LockState {
         }
     }
 
+    /// Grants the lock to a pending request, if possible.
     fn process_queue(&mut self) {
         while !self.pending.is_empty() {
             let Some(entry) = self.pending.get(0) else {
@@ -153,6 +176,7 @@ impl LockState {
 }
 
 impl LockRequest {
+    /// Notifies the attached Dart port that the request has been granted.
     fn notify_locked(&self) -> bool {
         let locked = c"locked".into();
         let mut parts = [&locked];
@@ -161,6 +185,7 @@ impl LockRequest {
             .send(&self.client.api, &mut DartObject::array(&mut parts))
     }
 
+    /// Notifies the attached Dart port that the request has been stolen.
     fn notify_stolen(&self) {
         if self.holds_lock.mark_cancelled() {
             let locked = c"stolen".into();
@@ -171,6 +196,8 @@ impl LockRequest {
         }
     }
 
+    /// Notifies the attached Dart port that a [LockRequest::if_available] request did not go
+    /// through.
     fn notify_not_available(&self) -> bool {
         let locked = c"unavailable".into();
         let mut parts = [&locked];
@@ -188,15 +215,19 @@ impl LockRequestState {
     pub const FLAG_HOLDS_LOCK: u8 = 0x01;
     pub const FLAG_CANCELLED: u8 = 0x02;
 
+    /// Transitions this request into holding the lock, returning whether it has held the lock
+    /// before.
     pub fn mark_holds_lock(&self) -> bool {
         let prev = self.0.fetch_or(Self::FLAG_HOLDS_LOCK, Ordering::SeqCst);
         return prev == 0;
     }
 
+    /// Marks this request as no longer holding the lock.
     pub fn reset_locked_bit(&self) {
         self.0.fetch_and(!Self::FLAG_HOLDS_LOCK, Ordering::SeqCst);
     }
 
+    /// Marks this request as cancelled.
     pub fn mark_cancelled(&self) -> bool {
         let previous = self.0.fetch_or(Self::FLAG_CANCELLED, Ordering::SeqCst);
         return previous & Self::FLAG_CANCELLED == 0;

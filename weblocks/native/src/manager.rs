@@ -5,8 +5,11 @@ use std::{
 
 use crate::state::{LockRequest, LockState};
 
+/// A lock manager maintaining multiple locks identified by their name.
 #[derive(Default)]
 pub struct LockManager {
+    /// For simplicity, we use a global mutex. That's not particularly efficient, but this mutex is
+    /// only held very briefly while we insert requests into a lock's queue.
     locks: Mutex<HashMap<String, LockState>>,
 }
 
