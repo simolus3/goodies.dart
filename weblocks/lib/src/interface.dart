@@ -19,6 +19,43 @@ abstract interface class LockManager {
   /// Returns a [LockManagerSnapshot] describing pending and held lock requests
   /// on this manager.
   Future<LockManagerSnapshot> query();
+
+  /// Creates a [BroadcastChannel] instance identified by its name.
+  ///
+  /// This allows different isolates, tabs or web workers to communicate with
+  /// each other without setting up a prior communication channel.
+  BroadcastChannel broadcastChannel(String name);
+}
+
+/// A cross-platform implementation of the [Broadcast Channel API](https://developer.mozilla.org/en-US/docs/Web/API/Broadcast_Channel_API).
+///
+/// Broadcast channels are created through [LockManager.broadcastChannel]. When
+/// [BroadcastChannel.send]ing a message to a broadcast channel, it will be
+/// emitted (since this implements the [Stream]) interface on all other
+/// channel instances.
+///
+/// Because the types that can be sent on the web and on native platforms are
+/// different, this currently only allows sending [String]s as a common subset
+/// of both types.
+abstract interface class BroadcastChannel implements Stream<String> {
+  /// The name of this broadcast channel.
+  String get name;
+
+  /// Sends a message to this broadcast channel.
+  ///
+  /// The message will be emitted by all other [BroadcastChannel]s with the same
+  /// [name].
+  void send(String message);
+
+  /// Explicitly closes this end of a channel.
+  ///
+  /// This will emit a done event to subscribers, and no messages can be sent
+  /// on this channel afterwards.
+  ///
+  /// Channels will clear up native resources even without being closed, but
+  /// it's still recommended to close them to avoid e.g. a [ReceivePort] for
+  /// this channel keeping the isolate alive.
+  void close();
 }
 
 /// A consistent snapshot of all requests being active at a point in time.

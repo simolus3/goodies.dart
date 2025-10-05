@@ -34,6 +34,25 @@ external void pkg_weblocks_unlock(Pointer<Void> ptr);
 @Native<Void Function(Pointer<Void>, Uint64)>(isLeaf: true)
 external void pkg_weblocks_snapshot(Pointer<Void> client, int port);
 
+@Native<Pointer<Void> Function(Size, Pointer<Uint8>, Pointer<Void>, Int64)>(
+  isLeaf: true,
+)
+external Pointer<Void> pkg_weblocks_broadcast_channel_new(
+  int nameLength,
+  Pointer<Uint8> name,
+  Pointer<Void> client,
+  int port,
+);
+
+@Native<Void Function(Pointer<Void>)>(isLeaf: true)
+external void pkg_weblocks_broadcast_channel_free(Pointer<Void> channel);
+
+@Native<Pointer<Void> Function(Pointer<Void>, Pointer<Uint8>)>()
+external Pointer<Void> pkg_weblocks_broadcast_channel_send(
+  Pointer<Void> channel,
+  Pointer<Uint8> zeroTerminatedName,
+);
+
 const FLAG_SHARED = 0x01;
 const FLAG_STEAL = 0x02;
 const FLAG_IF_AVAILABLE = 0x04;
@@ -43,3 +62,7 @@ final clientFinalizer = NativeFinalizer(
 );
 
 final requestFinalizer = NativeFinalizer(Native.addressOf(pkg_weblocks_unlock));
+
+final channelFinalizer = NativeFinalizer(
+  Native.addressOf(pkg_weblocks_broadcast_channel_free),
+);

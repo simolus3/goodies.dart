@@ -10,6 +10,7 @@ import 'package:ffi/ffi.dart';
 
 import '../interface.dart';
 import 'bindings.dart';
+import 'broadcast_channel.dart';
 
 final class NativeLockManager implements LockManager, Finalizable {
   final Pointer<Void> _client;
@@ -109,6 +110,11 @@ final class NativeLockManager implements LockManager, Finalizable {
     }
 
     return LockManagerSnapshot(pending: pending, held: held);
+  }
+
+  @override
+  BroadcastChannel broadcastChannel(String name) {
+    return NativeBroadcastChannel(_client, name);
   }
 }
 
@@ -217,7 +223,7 @@ final class _NativeHeldLock implements HeldLock {
   }
 }
 
-extension on Allocator {
+extension AllocateBytes on Allocator {
   Pointer<Uint8> allocBytes(Uint8List data) {
     final buffer = this<Uint8>(data.length);
     buffer.asTypedList(data.length).setAll(0, data);

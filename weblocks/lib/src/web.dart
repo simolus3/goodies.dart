@@ -88,6 +88,11 @@ final class WebLockManager implements LockManager {
 
     return _LockRequest(state);
   }
+
+  @override
+  BroadcastChannel broadcastChannel(String name) {
+    return _WebBroadcastChannel(web.BroadcastChannel(name));
+  }
 }
 
 extension on web.LockInfo {
@@ -180,6 +185,76 @@ final class _HeldLock implements HeldLock {
   void release() {
     if (!_state._release.isCompleted) {
       _state._release.complete();
+    }
+  }
+}
+
+final class _WebBroadcastChannel extends Stream<String>
+    implements BroadcastChannel {
+  final web.BroadcastChannel _web;
+  final StreamController<String> _controller = StreamController.broadcast();
+
+  bool _isClosed = false;
+
+  _WebBroadcastChannel(this._web) {
+    final messages = web.EventStreamProviders.messageEvent
+        .forTarget(_web)
+        .map((e) => (e.data as JSString).toDart);
+    StreamSubscription<String>? sub;
+
+    _controller
+      ..onListen = () {
+        // Not using addStream because we need to cancel the stream in [close].
+        sub = messages.listen(_controller.add);
+      }
+      ..onCancel = () {
+        sub?.cancel();
+        sub = null;
+      };
+  }
+
+  void _checkNotClosed() {
+    if (_isClosed) {
+      // Browsers also check this, but checking in Dart gives us consistent
+      // exceptions across native and web.
+      throw StateError('This BroadcastChannel has already been closed.');
+    }
+  }
+
+  @override
+  bool get isBroadcast => true;
+
+  @override
+  StreamSubscription<String> listen(
+    void Function(String event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    _checkNotClosed();
+    return _controller.stream.listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+  }
+
+  @override
+  String get name => _web.name;
+
+  @override
+  void send(String message) {
+    _checkNotClosed();
+    _web.postMessage(message.toJS);
+  }
+
+  @override
+  void close() {
+    if (!_isClosed) {
+      _isClosed = true;
+      _web.close();
+      _controller.close();
     }
   }
 }

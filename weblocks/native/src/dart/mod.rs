@@ -5,6 +5,7 @@ pub use dl::DartApi;
 pub use object::DartObject;
 
 /// A wrapper around a native `SendPort`.
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct DartPort(i64);
 

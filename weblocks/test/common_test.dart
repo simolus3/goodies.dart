@@ -99,7 +99,7 @@ void main() {
     });
   });
 
-  group('reqeuest validation', () {
+  group('request validation', () {
     test('cannot request locks starting with hyphen', () async {
       expect(() => lockManager.request('-invalid').completion, _throws);
     });
@@ -137,6 +137,46 @@ void main() {
       final held = await request.completion;
       expect(() => request.cancel(), _throws);
       held!.release();
+    });
+  });
+
+  group('broadcast channel', () {
+    test('sends events to other channels', () async {
+      final a = lockManager.broadcastChannel(prefix);
+      final b = lockManager.broadcastChannel(prefix);
+      a.send('before-listen');
+      await pumpEventQueue();
+
+      final allMessagesOnB = b.toList();
+      final allMessagesOnA = a.toList();
+
+      a.send('a');
+      b.send('b');
+
+      await pumpEventQueue();
+      a.close();
+      b.close();
+
+      expect(await allMessagesOnA, ['b']);
+      expect(await allMessagesOnB, ['a']);
+    });
+
+    test('closing emits done event', () async {
+      final channel = lockManager.broadcastChannel(prefix);
+      final didClose = expectLater(channel, emitsDone);
+
+      channel.close();
+      await didClose;
+    });
+
+    test('does not allow listening after close', () {
+      final channel = lockManager.broadcastChannel(prefix)..close();
+      expect(() => channel.listen(null), throwsStateError);
+    });
+
+    test('does not allow sending after close', () {
+      final channel = lockManager.broadcastChannel(prefix)..close();
+      expect(() => channel.send('foo'), throwsStateError);
     });
   });
 }

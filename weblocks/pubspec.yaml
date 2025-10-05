@@ -1,10 +1,10 @@
 name: weblocks
-description: A native, asynchronous, read-write lock that works across isolates and tabs.
-version: 0.1.0-wip
+description: A full-stack implementation of the navigator locks and broadcast channel APIs.
+version: 0.1.1-wip
 repository: https://github.com/simolus3/goodies.dart
 
 environment:
-  sdk: ^3.9.0-0
+  sdk: ^3.10.0-0
 
 dependencies:
   ffi: ^2.1.4

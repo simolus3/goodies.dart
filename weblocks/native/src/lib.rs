@@ -12,6 +12,7 @@ use crate::{
     state::LockRequest,
 };
 
+mod broadcast_channel;
 mod dart;
 mod manager;
 mod state;
@@ -26,6 +27,17 @@ struct LockClient {
     /// The name of the client as registered in Dart.
     name: String,
     pub(crate) api: DartApi,
+}
+
+impl LockClient {
+    unsafe fn increment_from_raw(raw: *const c_void) -> Arc<Self> {
+        let client = raw.cast::<LockClient>();
+        unsafe { Arc::increment_strong_count(client) };
+        unsafe {
+            // Safety: Dart will pass a pointer returned by [pkg_weblocks_client].
+            Arc::from_raw(client)
+        }
+    }
 }
 
 struct RequestSnapshot {
@@ -83,11 +95,9 @@ pub extern "C" fn pkg_weblocks_obtain(
     }
     .to_string();
 
-    let client = client.cast::<LockClient>();
-    unsafe { Arc::increment_strong_count(client) };
     let client = unsafe {
-        // Safety: Dart will pass a pointer returned by [pkg_weblocks_client].
-        Arc::from_raw(client)
+        // Safety: Dart should only pass valid pointers.
+        LockClient::increment_from_raw(client)
     };
 
     let request = Arc::new(LockRequest {
