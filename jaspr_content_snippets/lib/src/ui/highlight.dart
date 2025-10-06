@@ -20,8 +20,13 @@ final class HighlightBlock extends StatelessComponent {
   @override
   Component build(BuildContext context) {
     final highlighter = SyntaxOnlyHighlighter.builtin('.$language');
-    final tokens = highlighter?.highlightWithoutContext(source) ?? const [];
-    tokens.sort(HighlightToken.offsetLengthPrioritySort);
+    var tokens = highlighter?.highlightWithoutContext(source);
+    if (tokens != null) {
+      tokens.sort(HighlightToken.offsetLengthPrioritySort);
+      tokens = HighlightToken.splitOverlappingTokens(tokens).toList();
+    } else {
+      tokens = const [];
+    }
 
     final sourceFile = SourceFile.fromString(source);
 
