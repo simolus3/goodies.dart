@@ -108,6 +108,11 @@ final class HighlightToken {
     );
   }
 
+  @override
+  String toString() {
+    return '$offset..${offset + length}: $type';
+  }
+
   Map<String, Object?> toJson() {
     return {
       'o': offset,

@@ -142,6 +142,27 @@ components: [
 With that set up, you can use the `<Snippet href="/lib/src/your_snippet.dart" name="region" />`
 tag to reference a snippet.
 
+To render snippets you only have available as sources, use the `HighlightBlock` component
+or the builtin `BetterCodeBlock` component which serves as a drop-in replacement for
+`CodeBlock`:
+
+```dart
+import 'package:jaspr_content/jaspr_content.dart';
+import 'package:jaspr_content_snippets/jaspr_content_snippets.dart';
+
+final root = ContentApp.custom(
+  // ...
+  configResolver: PageConfig.all(
+    // ...
+    components: [
+      BetterCodeBlock(),
+      renderedSnippetComponent(snippets: generatedSnippets),
+      // ...
+    ],
+  ),
+);
+```
+
 ## Additional information
 
 This package embeds parts of `analysis_server` source code from the SDK.

@@ -1,3 +1,4 @@
+// @docimport 'package:jaspr_content/components/code_block.dart';
 import 'package:jaspr/server.dart';
 import 'package:jaspr_content/jaspr_content.dart';
 import 'package:path/path.dart';
@@ -10,6 +11,7 @@ export 'src/highlighted_excerpt.dart';
 export 'src/excerpts/excerpt.dart';
 
 export 'src/ui/container.dart';
+export 'src/ui/highlight.dart';
 export 'src/ui/span.dart';
 export 'src/ui/options.dart';
 
@@ -31,6 +33,44 @@ CustomComponent renderedSnippetComponent({
       return _RenderedSnippet(attributes, snippets);
     },
   );
+}
+
+/// A drop-in replacement for [CodeBlock] parsing inline sources and rendering
+/// them with a builtin highlighting engine.
+///
+/// This supports the `dart` (using `package:analyzer`), `sql`, `drift` (using
+/// `package:sqlparser`) and `yaml` (using `package:yaml`) packages.
+final class BetterCodeBlock implements CustomComponent {
+  @override
+  Component? create(Node node, NodesBuilder builder) {
+    if (node
+        case ElementNode(
+              tag: 'Code' || 'CodeBlock',
+              :final children,
+              :final attributes,
+            ) ||
+            ElementNode(
+              tag: 'pre',
+              children: [
+                ElementNode(tag: 'code', :final children, :final attributes),
+              ],
+            )) {
+      var language = attributes['language'];
+      if (language == null &&
+          (attributes['class']?.startsWith('language-') ?? false)) {
+        language = attributes['class']!.substring('language-'.length);
+      }
+
+      final source = children?.map((c) => c.innerText).join(' ') ?? '';
+      final raw = HighlightBlock(
+        source: source,
+        language: language ?? 'unknown',
+      );
+
+      return CodeSnippetContainer(child: raw);
+    }
+    return null;
+  }
 }
 
 final class _RenderedSnippet extends AsyncStatelessComponent {
