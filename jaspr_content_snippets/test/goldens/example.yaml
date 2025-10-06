@@ -1,0 +1,33 @@
+builders:
+  api_index:
+    import: 'package:jaspr_content_snippets/builders.dart'
+    build_to: cache
+    builder_factories: ['DartIndexBuilder.new']
+    auto_apply: all_packages
+    runs_before: [jaspr_content_snippets]
+    build_extensions: {"$package$": ['lib/api.json']}
+
+  jaspr_content_snippets:
+    import: 'package:jaspr_content_snippets/builders.dart'
+    build_to: cache
+    builder_factories: ['excerptsBuilder']
+    auto_apply: none
+    build_extensions: {'': ['.snippet.json']}
+    defaults:
+      options:
+        process_without_directives: false
+
+  # #docregion combiner
+  combiner:
+    import: 'package:jaspr_content_snippets/builders.dart'
+    build_to: source
+    builder_factories: ['combiner']
+    auto_apply: root_package
+    required_inputs:
+      - ".snippet.json"
+      - "api.json"
+    build_extensions: {'$package$': ['lib/generated_snippets.dart']}
+    defaults:
+      options:
+        path: lib/generated_snippets.dart
+  # #enddocregion combiner

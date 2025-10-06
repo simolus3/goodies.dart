@@ -1,16 +1,11 @@
-import 'package:build/build.dart';
 import 'package:sqlparser/sqlparser.dart';
 
 import 'highlighter.dart';
 import 'token_type.dart';
 
-class SqlHighlighter implements Highlighter {
-  final AssetReader reader;
-
-  SqlHighlighter(this.reader);
-
+class SqlHighlighter implements SyntaxOnlyHighlighter {
   @override
-  Future<List<HighlightToken>> highlight(AssetId id) async {
+  List<HighlightToken> highlightWithoutContext(String source) {
     final engine = SqlEngine(
       EngineOptions(
         driftOptions: const DriftSqlOptions(),
@@ -18,7 +13,7 @@ class SqlHighlighter implements Highlighter {
       ),
     );
 
-    final result = engine.parseDriftFile(await reader.readAsString(id));
+    final result = engine.parseDriftFile(source);
     final tokens = <HighlightToken>[];
     void reportSql(
       SyntacticEntity? entity,

@@ -3,17 +3,58 @@ import 'dart:math' as math;
 
 import 'package:build/build.dart';
 
+import 'dart/highlighter.dart';
+import 'sql.dart';
 import 'token_type.dart';
+import 'yaml.dart';
 
 /// Generates a list of tokens representing highlighted regions in a source
 /// file.
 abstract interface class Highlighter {
+  /// A [Highlighter] implemented by reading files to text and them parsing
+  /// those without further analysis.
+  factory Highlighter.nonSemantic(
+    SyntaxOnlyHighlighter highlighter,
+    AssetReader reader,
+  ) {
+    return _SyntaxOnlyHighlighter(highlighter, reader);
+  }
+
   /// Loads or resolves the source file under [id] to obtain a list of
   /// highlighting tokens.
   ///
   /// Tokens are allowed to be unordered and overlapping - they will be
   /// normalized later.
   Future<List<HighlightToken>> highlight(AssetId id);
+}
+
+final class _SyntaxOnlyHighlighter implements Highlighter {
+  final SyntaxOnlyHighlighter _syntax;
+  final AssetReader _reader;
+
+  _SyntaxOnlyHighlighter(this._syntax, this._reader);
+
+  @override
+  Future<List<HighlightToken>> highlight(AssetId id) async {
+    return _syntax.highlightWithoutContext(await _reader.readAsString(id));
+  }
+}
+
+/// A highlighter that doesn't take semantic analysis results into account.
+abstract interface class SyntaxOnlyHighlighter {
+  /// Resolves a highlighter built in to this package based on a file extension
+  /// (with the dot).
+  static SyntaxOnlyHighlighter? builtin(String extension) {
+    return switch (extension) {
+      '.dart' => SyntacticDartHighlighter(),
+      '.sql' || '.drift' => SqlHighlighter(),
+      '.yaml' => YamlHighlighter(),
+      _ => null,
+    };
+  }
+
+  /// Computes highlight tokens for the given [source] without analyzing it.
+  List<HighlightToken> highlightWithoutContext(String source);
 }
 
 /// A single token found in a source file.

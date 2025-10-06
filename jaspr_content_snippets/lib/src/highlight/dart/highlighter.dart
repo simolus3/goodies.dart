@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:build/build.dart';
 
 import '../highlighter.dart';
@@ -32,6 +33,18 @@ final class DartHighlighter implements Highlighter {
       semanticTokens,
       buildStep,
     );
+
+    return semanticTokens;
+  }
+}
+
+final class SyntacticDartHighlighter implements SyntaxOnlyHighlighter {
+  @override
+  List<HighlightToken> highlightWithoutContext(String source) {
+    final result = parseString(content: source, throwIfDiagnostics: false);
+
+    final computer = DartUnitHighlightsComputer(result.unit);
+    final semanticTokens = computer.computeSemanticTokens();
 
     return semanticTokens;
   }

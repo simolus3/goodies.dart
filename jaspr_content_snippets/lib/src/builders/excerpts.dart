@@ -8,7 +8,6 @@ import 'package:source_span/source_span.dart';
 import '../excerpts/excerpt.dart';
 import '../highlight/dart/highlighter.dart';
 import '../highlight/highlighter.dart';
-import '../highlight/sql.dart';
 import '../highlighted_excerpt.dart';
 import '../ui/options.dart';
 import '../ui/span.dart';
@@ -28,11 +27,17 @@ base class CodeExcerptBuilder implements Builder {
   /// This uses the extension of the primary input to obtain a highlighter
   /// instance, or `null` if the file type can't be highlighted.
   Future<Highlighter?> highlighterFor(BuildStep buildStep) async {
-    return switch (buildStep.inputId.extension) {
-      '.dart' => DartHighlighter(buildStep),
-      '.sql' || '.drift' => SqlHighlighter(buildStep),
-      _ => null,
-    };
+    final extension = buildStep.inputId.extension;
+    if (extension == '.dart') {
+      return DartHighlighter(buildStep);
+    }
+
+    final builtin = SyntaxOnlyHighlighter.builtin(extension);
+    if (builtin != null) {
+      return Highlighter.nonSemantic(builtin, buildStep);
+    }
+
+    return null;
   }
 
   /// Resolves rendering options for a source file.

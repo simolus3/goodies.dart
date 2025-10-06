@@ -1,3 +1,7 @@
+## 0.1.2
+
+- Support highlighting YAML files.
+
 ## 0.1.1
 
 - Properly escape quotes in generated code.
