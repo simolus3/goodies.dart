@@ -18,7 +18,7 @@ void main() {
     final rendered = await renderComponent(component, standalone: true);
     expect(rendered.body, '''
 <span><span class="keyword void">void</span> <span class="function declaration static">main</span>() {
-  <span class="source">print</span>(<span class="string">\'Hello world!\'</span>);
+  <span class="source">print</span>(<span class="string">'Hello world!'</span>);
 }</span>
 ''');
   });
