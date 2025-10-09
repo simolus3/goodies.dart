@@ -6,6 +6,10 @@ import 'package:path/path.dart' as p;
 
 void main(List<String> args) async {
   await build(args, (input, output) async {
+    if (!input.config.buildCodeAssets) {
+      return;
+    }
+
     Future<void> useHostBuild() async {
       await _cargoBuild();
 
