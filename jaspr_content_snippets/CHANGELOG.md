@@ -1,3 +1,7 @@
+## 0.1.3
+
+- Fix highlighting YAML files with anchors.
+
 ## 0.1.2
 
 - Support highlighting YAML files.

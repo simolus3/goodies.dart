@@ -52,4 +52,24 @@ foo:
   - <span class="property">bar</span>: <span class="keyword">true</span></span>
 ''');
   });
+
+  test('yaml with anchors', () async {
+    final component = HighlightBlock(
+      source: '''
+foo: &common
+  - bar: true
+
+bar: *common
+''',
+      language: 'yaml',
+    );
+
+    final rendered = await renderComponent(component, standalone: true);
+    expect(rendered.body, '''
+<span><span class="property">foo</span>: &amp;common
+  - <span class="property">bar</span>: <span class="keyword">true</span>
+
+<span class="property">bar</span>: *common</span>
+''');
+  });
 }

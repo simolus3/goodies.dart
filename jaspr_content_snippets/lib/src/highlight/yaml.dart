@@ -15,6 +15,9 @@ final class YamlHighlighter implements SyntaxOnlyHighlighter {
 }
 
 final class _YamlVisitor {
+  /// Keep track of all visited nodes to avoid highlighting regions multiple
+  /// times if they're reused as anchors.
+  final Set<YamlNode> _visited = {};
   final List<HighlightToken> tokens = [];
 
   void processMap(YamlMap map) {
@@ -49,6 +52,10 @@ final class _YamlVisitor {
   }
 
   void process(YamlNode node) {
+    if (!_visited.add(node)) {
+      return;
+    }
+
     switch (node) {
       case YamlMap():
         processMap(node);
