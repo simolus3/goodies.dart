@@ -1,3 +1,4 @@
+# Note: Keep in sync with jaspr_content_snippets.build.yaml
 builders:
   api_index:
     import: 'package:jaspr_content_snippets/builders.dart'
