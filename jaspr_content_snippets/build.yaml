@@ -16,6 +16,7 @@ builders:
     defaults:
       options:
         process_without_directives: false
+        drop_indentation: false
 
   combiner:
     import: 'package:jaspr_content_snippets/builders.dart'

@@ -1,3 +1,8 @@
+## 0.2.0
+
+- Remove `syntax_highlight_lite` integration.
+- Add `drop_indentation` builder option to strip leading whitespace.
+
 ## 0.1.3
 
 - Fix highlighting YAML files with anchors.

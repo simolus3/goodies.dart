@@ -16,7 +16,12 @@ base class CodeExcerptBuilder implements Builder {
   /// Whether to process snippets without any `#docregion` directives.
   final bool allowWithoutDirectives;
 
-  CodeExcerptBuilder({required this.allowWithoutDirectives});
+  final bool dropIndendation;
+
+  CodeExcerptBuilder({
+    required this.allowWithoutDirectives,
+    required this.dropIndendation,
+  });
 
   bool shouldEmitFor(AssetId input, Excerpter excerpts) {
     return allowWithoutDirectives || excerpts.containsDirectives;
@@ -47,7 +52,7 @@ base class CodeExcerptBuilder implements Builder {
   Future<UnresolvedRenderingOptions> renderingOptionsFor(
     BuildStep buildStep,
   ) async {
-    return const UnresolvedRenderingOptions();
+    return UnresolvedRenderingOptions(dropIndendation: dropIndendation);
   }
 
   @override

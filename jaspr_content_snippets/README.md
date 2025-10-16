@@ -107,6 +107,9 @@ targets:
         enabled: true
         options:
           process_without_directives: true
+          # Remove common leading whitespace if all lines in a region start with
+          # that whitespace.
+          drop_indentation: true
         generate_for:
           - lib/src/snippets/**
 ```

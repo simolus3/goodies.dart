@@ -1,10 +1,8 @@
 import 'package:jaspr/server.dart';
 import 'package:source_span/source_span.dart';
-import 'package:syntax_highlight_lite/syntax_highlight_lite.dart' hide Color;
 
 import '../excerpts/excerpt.dart';
 import '../highlight/highlighter.dart';
-import '../highlight/token_type.dart';
 
 final class UnresolvedRenderingOptions {
   /// How to apply styles (either with inline CSS or by using CSS classes named
@@ -122,10 +120,6 @@ sealed class SpanRenderingMode {
   /// semantic token type).
   const factory SpanRenderingMode.cssClasses() = _Classes;
 
-  /// Render inline styles derived from the [HighlighterTheme].
-  const factory SpanRenderingMode.highlighter(HighlighterTheme theme) =
-      _HighlighterTheme;
-
   (String?, Styles?) classesAndStylesFor(HighlightToken token);
 }
 
@@ -141,86 +135,5 @@ final class _Classes implements SpanRenderingMode {
     ].join(' ');
 
     return (classes, null);
-  }
-}
-
-final class _HighlighterTheme implements SpanRenderingMode {
-  final HighlighterTheme _theme;
-
-  const _HighlighterTheme(this._theme);
-
-  @override
-  (String?, Styles?) classesAndStylesFor(HighlightToken token) {
-    // Highlighters from syntax_highlight_lite use the old TextMate scope names
-    // instead of semantic tokens. A mapping is available here: https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#predefined-textmate-scope-mappings
-    String ifHasModifier(
-      SemanticTokenModifiers mod,
-      String withMod,
-      String without,
-    ) {
-      return token.modifiers?.contains(mod) == true ? withMod : without;
-    }
-
-    final legacyScope = switch (token.type) {
-      SemanticTokenTypes.namespace => 'entity.name.namespace',
-      SemanticTokenTypes.type => ifHasModifier(
-        SemanticTokenModifiers.defaultLibrary,
-        'support.type',
-        'entity.name.type',
-      ),
-      SemanticTokenTypes.struct => 'storage.type.struct',
-      SemanticTokenTypes.class_ => ifHasModifier(
-        SemanticTokenModifiers.defaultLibrary,
-        'support.class',
-        'entity.name.type.clas',
-      ),
-      SemanticTokenTypes.interface => 'entity.name.type.interface',
-      SemanticTokenTypes.enum_ => 'entity.name.type.enum',
-      SemanticTokenTypes.function => ifHasModifier(
-        SemanticTokenModifiers.defaultLibrary,
-        'support.function',
-        'entity.name.function',
-      ),
-      SemanticTokenTypes.method => 'entity.name.function.member',
-      SemanticTokenTypes.macro => 'entity.name.function.preprocessor',
-      SemanticTokenTypes.variable => ifHasModifier(
-        SemanticTokenModifiers.readonly,
-        'variable.other.constant',
-        ifHasModifier(
-          SemanticTokenModifiers.defaultLibrary,
-          'support.constant',
-          'variable.other.readwrite',
-        ),
-      ),
-      SemanticTokenTypes.parameter => 'variable.parameter',
-      SemanticTokenTypes.property => ifHasModifier(
-        SemanticTokenModifiers.readonly,
-        'variable.other.property',
-        'variable.other.property',
-      ),
-      SemanticTokenTypes.enumMember => 'variable.other.enummember',
-      SemanticTokenTypes.event => 'variable.other.event',
-
-      _ => '',
-    };
-
-    Styles highlightStyleToJaspr(TextStyle style) {
-      return Styles(
-        color: Color.value(style.foreground.argb & 0x00FFFFFF),
-        fontWeight: style.bold ? FontWeight.bold : null,
-        fontStyle: style.italic ? FontStyle.italic : null,
-        textDecoration: style.underline
-            ? TextDecoration(line: TextDecorationLine.underline)
-            : null,
-      );
-    }
-
-    for (final scope in legacyScope.split('.').reversed) {
-      if (_theme.scopes[scope] case final style?) {
-        return (null, highlightStyleToJaspr(style));
-      }
-    }
-
-    return (null, null);
   }
 }
