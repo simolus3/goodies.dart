@@ -40,7 +40,9 @@ CustomComponent renderedSnippetComponent({
 ///
 /// This supports the `dart` (using `package:analyzer`), `sql`, `drift` (using
 /// `package:sqlparser`) and `yaml` (using `package:yaml`) packages.
-final class BetterCodeBlock implements CustomComponent {
+final class BetterCodeBlock extends CustomComponent {
+  BetterCodeBlock() : super.base();
+
   @override
   Component? create(Node node, NodesBuilder builder) {
     if (node

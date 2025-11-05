@@ -24,6 +24,7 @@ jobs:
       - run: cargo install cargo-ndk
       - name: Install cross-compiling GCC
         run: |
+          sudo apt update
           sudo apt install -y gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu gcc-arm-linux-gnueabihf
 
       - name: Build x64

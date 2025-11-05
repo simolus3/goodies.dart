@@ -1,3 +1,7 @@
+## 0.2.1
+
+- Fix compilation error with latest `jaspr_content`.
+
 ## 0.2.0
 
 - Remove `syntax_highlight_lite` integration.
