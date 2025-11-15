@@ -18,11 +18,8 @@ In addition to locks, this package also ports the `BroadcastChannel` API to nati
 
 ## Getting started
 
-Note that this package requires the `native-assets` experiment, meaning that it is currently only
-available on beta builds of the Dart SDK.
-
-Apart from that, `dart pub add weblocks` is the only step to install this package. Build hooks will
-automatically download native sources where required.
+To install this package, run `dart pub add weblocks`.  Build hooks will automatically
+download native binaries where required.
 
 ## Usage
 

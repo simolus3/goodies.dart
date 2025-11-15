@@ -1,4 +1,4 @@
-## 0.1.2-wip
+## 0.1.2
 
 - Hook: Only emit code asset when code assets are requested.
 

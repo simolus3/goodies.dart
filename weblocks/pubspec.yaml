@@ -1,15 +1,16 @@
 name: weblocks
-description: A full-stack implementation of the navigator locks and broadcast channel APIs.
-version: 0.1.2-wip
+description: Asynchronous locks and broadcast channels across isolates, no SendPorts required.
+version: 0.1.2
 repository: https://github.com/simolus3/goodies.dart
 
 environment:
-  sdk: ^3.10.0-0
+  # We want >=3.10, but Flutter 3.38 ships with a beta Dart SDK that rejects >=3.10 deps.
+  sdk: '>=3.9.999 <4.0.0'
 
 dependencies:
   ffi: ^2.1.4
-  hooks: ^0.20.0
-  code_assets: ^0.19.0
+  hooks: ^1.0.0
+  code_assets: ^1.0.0
   web: ^1.1.1
   path: ^1.9.1
 
