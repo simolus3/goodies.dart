@@ -1,3 +1,4 @@
+import 'package:build_test/build_test.dart';
 import 'package:jaspr/server.dart';
 import 'package:jaspr_content_snippets/jaspr_content_snippets.dart';
 import 'package:source_span/source_span.dart';
@@ -22,9 +23,12 @@ void main() {
     );
 
     final result = await renderComponent(span, standalone: true);
-    expect(result.body, '''
+    expect(
+      result.body,
+      decodedMatches('''
 <span>2
 3</span>
-''');
+'''),
+    );
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:jaspr/server.dart';
 import 'package:jaspr_content_snippets/src/ui/highlight.dart';
 import 'package:test/test.dart';
@@ -16,7 +18,7 @@ void main() {
     );
 
     final rendered = await renderComponent(component, standalone: true);
-    expect(rendered.body, '''
+    expect(rendered.decodedBody, '''
 <span><span class="keyword void">void</span> <span class="function declaration static">main</span>() {
   <span class="source">print</span>(<span class="string">'Hello world!'</span>);
 }</span>
@@ -32,7 +34,7 @@ query: SELECT * FROM foo;
     );
 
     final rendered = await renderComponent(component, standalone: true);
-    expect(rendered.body, '''
+    expect(rendered.decodedBody, '''
 <span><span class="function declaration">query</span>: <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="class">foo</span>;</span>
 ''');
   });
@@ -47,7 +49,7 @@ foo:
     );
 
     final rendered = await renderComponent(component, standalone: true);
-    expect(rendered.body, '''
+    expect(rendered.decodedBody, '''
 <span><span class="property">foo</span>:
   - <span class="property">bar</span>: <span class="keyword">true</span></span>
 ''');
@@ -65,11 +67,15 @@ bar: *common
     );
 
     final rendered = await renderComponent(component, standalone: true);
-    expect(rendered.body, '''
+    expect(rendered.decodedBody, '''
 <span><span class="property">foo</span>: &amp;common
   - <span class="property">bar</span>: <span class="keyword">true</span>
 
 <span class="property">bar</span>: *common</span>
 ''');
   });
+}
+
+extension on ResponseLike {
+  String get decodedBody => utf8.decode(body);
 }
