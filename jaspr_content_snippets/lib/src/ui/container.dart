@@ -1,4 +1,5 @@
-import 'package:jaspr/server.dart';
+import 'package:jaspr/jaspr.dart';
+import 'package:jaspr/dom.dart';
 import 'package:jaspr_content_snippets/internal/client.dart';
 
 final class CodeSnippetContainer extends StatelessComponent {

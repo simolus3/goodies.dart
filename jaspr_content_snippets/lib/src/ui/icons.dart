@@ -1,3 +1,4 @@
+import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 
 // Stolen from https://github.com/schultek/jaspr/blob/1ef3e7bdf4c18bdbb7f697316bc423e9b82bc2be/packages/jaspr_content/lib/components/_internal/icon.dart#L139-L154

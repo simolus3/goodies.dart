@@ -1,3 +1,4 @@
+import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
 import 'package:source_span/source_span.dart';
 
@@ -88,7 +89,7 @@ final class UnresolvedRenderingOptions {
     ContinousRegion last,
     ContinousRegion upcoming,
   ) {
-    return text('\n');
+    return .text('\n');
   }
 }
 

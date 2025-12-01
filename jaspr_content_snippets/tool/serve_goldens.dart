@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
 import 'package:shelf/shelf_io.dart';
 import 'package:path/path.dart';
@@ -26,7 +27,7 @@ void main() {
               for (final file in generatedSnippets.keys)
                 li([
                   a(href: url.relative(file, from: 'test/goldens/'), [
-                    text(file),
+                    .text(file),
                   ]),
                 ]),
             ]),
@@ -47,12 +48,12 @@ void main() {
       final body = await renderComponent(
         Document(
           head: [link(href: '/style.css', rel: 'stylesheet')],
-          body: fragment([
+          body: .fragment([
             for (final MapEntry(:key, :value) in goldens.entries)
               div([
-                h2([text(key)]),
+                h2([.text(key)]),
                 code([
-                  pre([raw(value)]),
+                  pre([RawText(value)]),
                 ]),
                 hr(),
               ]),

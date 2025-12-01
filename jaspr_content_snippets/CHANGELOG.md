@@ -1,3 +1,7 @@
+## 0.2.2-beta.0
+
+- Update `jaspr` to version `0.22.0-beta.0`.
+
 ## 0.2.1
 
 - Fix compilation error with latest `jaspr_content`.

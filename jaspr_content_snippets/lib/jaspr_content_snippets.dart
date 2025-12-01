@@ -1,4 +1,5 @@
 // @docimport 'package:jaspr_content/components/code_block.dart';
+import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
 import 'package:jaspr_content/jaspr_content.dart';
 import 'package:path/path.dart';
@@ -103,6 +104,6 @@ final class _RenderedSnippet extends AsyncStatelessComponent {
       throw ArgumentError('Snippet $name in $path not found');
     }
 
-    return CodeSnippetContainer(child: raw(snippet));
+    return CodeSnippetContainer(child: RawText(snippet));
   }
 }

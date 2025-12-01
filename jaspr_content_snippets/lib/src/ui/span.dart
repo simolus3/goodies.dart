@@ -1,7 +1,8 @@
 import 'dart:math';
 
+import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
-import 'package:jaspr/jaspr.dart' as jaspr;
+import 'package:jaspr/dom.dart' as jaspr;
 import 'package:source_span/source_span.dart';
 
 import '../highlight/highlighter.dart';
@@ -30,7 +31,7 @@ final class ExcerptSpan extends StatelessComponent {
 
     Component createRawTextNode(FileSpan span, [int stripIndent = 0]) {
       if (stripIndent == 0) {
-        return text(span.text);
+        return .text(span.text);
       } else {
         // Go through the span line-by-line. If it starts at the beginning of a
         // line, drop the first [stripIndent] units.
@@ -58,7 +59,7 @@ final class ExcerptSpan extends StatelessComponent {
           }
         }
 
-        return text(buffer.toString());
+        return .text(buffer.toString());
       }
     }
 

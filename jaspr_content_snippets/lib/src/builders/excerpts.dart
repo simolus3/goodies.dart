@@ -84,7 +84,9 @@ base class CodeExcerptBuilder implements Builder {
           ExcerptSpan(options: baseOptions.resolveWith(file, tokens, excerpt)),
         );
 
-        rendered.add(RenderedExcerpt(excerpt: excerpt, html: html.body));
+        rendered.add(
+          RenderedExcerpt(excerpt: excerpt, html: utf8.decode(html.body)),
+        );
       }
 
       final extracted = ExtractedExcerpts(excerpts: rendered, tokens: tokens);
