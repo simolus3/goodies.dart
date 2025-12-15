@@ -1,3 +1,7 @@
+## 0.2.3
+
+- Update `sqlparser` to `0.43.0`.
+
 ## 0.2.2
 
 - Update `jaspr` to version `0.22.0`.

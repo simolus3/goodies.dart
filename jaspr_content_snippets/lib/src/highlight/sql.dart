@@ -1,3 +1,4 @@
+import 'package:source_span/source_span.dart';
 import 'package:sqlparser/sqlparser.dart';
 
 import 'highlighter.dart';
@@ -13,7 +14,8 @@ class SqlHighlighter implements SyntaxOnlyHighlighter {
       ),
     );
 
-    final result = engine.parseDriftFile(source);
+    final span = SourceFile.fromString(source).span(0);
+    final result = engine.parseDriftFile(span);
     final tokens = <HighlightToken>[];
     void reportSql(
       SyntacticEntity? entity,
