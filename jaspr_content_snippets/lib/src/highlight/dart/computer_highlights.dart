@@ -22,6 +22,7 @@ import 'package:analyzer/src/dart/ast/extensions.dart';
 import 'package:analyzer/src/dart/element/extensions.dart';
 import 'package:analyzer/src/utilities/extensions/ast.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart' hide Element;
+import 'package:collection/collection.dart';
 
 import '../token_type.dart';
 import '../highlighter.dart';
@@ -184,7 +185,8 @@ class DartUnitHighlightsComputer {
     if (parent is NamedType &&
         grandParent is ConstructorName &&
         grandParent.parent is InstanceCreationExpression) {
-      // new Class()
+      // new [!Class!]()
+      // new [!Class!].named()
       type = HighlightRegionType.CONSTRUCTOR;
       semanticType = SemanticTokenTypes.class_;
       semanticModifiers = {CustomSemanticTokenModifiers.constructor};
@@ -192,6 +194,8 @@ class DartUnitHighlightsComputer {
       type = HighlightRegionType.ENUM;
     } else if (element is ExtensionTypeElement) {
       type = HighlightRegionType.EXTENSION_TYPE;
+    } else if (element is MixinElement) {
+      type = HighlightRegionType.MIXIN;
     } else {
       type = HighlightRegionType.CLASS;
       if (parent is ConstructorDeclaration) {
@@ -423,14 +427,25 @@ class DartUnitHighlightsComputer {
     Token nameToken,
     Element? element,
   ) {
-    if (element is! MethodElement) {
-      return false;
-    }
-    var isStatic = element.isStatic;
     var isInvocation =
         (parent is MethodInvocation && parent.methodName.token == nameToken) ||
         (parent is DotShorthandInvocation &&
             parent.memberName.token == nameToken);
+
+    // Handle the `call` method on functions.
+    if (_isCallMethod(parent, nameToken)) {
+      return _addRegion_token(
+        nameToken,
+        isInvocation
+            ? HighlightRegionType.INSTANCE_METHOD_REFERENCE
+            : HighlightRegionType.INSTANCE_METHOD_TEAR_OFF,
+      );
+    }
+
+    if (element is! MethodElement) {
+      return false;
+    }
+    var isStatic = element.isStatic;
     // OK
     HighlightRegionType type;
     if (isStatic) {
@@ -661,6 +676,47 @@ class DartUnitHighlightsComputer {
     }
   }
 
+  /// Returns whether [nameToken] is a reference to the `call` method on
+  /// a function.
+  bool _isCallMethod(AstNode parent, Token nameToken) {
+    late bool enclosingInstanceFunction =
+        switch (parent.enclosingInstanceElement) {
+          ExtensionElement(:var extendedType) => extendedType.isFunction,
+          _ => false,
+        };
+    Expression? expression() => switch (parent) {
+      ExpressionFunctionBody(:var expression) ||
+      ExpressionStatement(:var expression) => expression,
+      ReturnStatement(:var expression) => expression,
+      ArgumentList(:var arguments) => arguments.firstWhereOrNull((argument) {
+        return argument is SimpleIdentifier && argument.token == nameToken;
+      }),
+      AssignmentExpression(:var rightHandSide) => rightHandSide,
+      VariableDeclaration(:var initializer) => initializer,
+      _ => null,
+    };
+    return // Invocation
+    (parent is MethodInvocation &&
+            parent.methodName.token == nameToken &&
+            parent.methodName.name == MethodElement.CALL_METHOD_NAME &&
+            ((parent.realTarget?.staticType).isFunction ||
+                enclosingInstanceFunction)) ||
+        // Tearoff
+        (parent is PrefixedIdentifier &&
+            parent.identifier.token == nameToken &&
+            parent.identifier.name == MethodElement.CALL_METHOD_NAME &&
+            parent.prefix.staticType.isFunction) ||
+        // Property access
+        (parent is PropertyAccess &&
+            parent.propertyName.token == nameToken &&
+            parent.propertyName.name == MethodElement.CALL_METHOD_NAME &&
+            parent.realTarget.staticType.isFunction) ||
+        // Special cases for extension methods
+        (expression() is SimpleIdentifier &&
+            nameToken.lexeme == MethodElement.CALL_METHOD_NAME &&
+            enclosingInstanceFunction);
+  }
+
   void _reset() {
     _computeSemanticTokens = false;
     _semanticTokens.clear();
@@ -815,7 +871,7 @@ class _DartUnitHighlightsComputerVisitor extends RecursiveAstVisitor<void> {
     computer._addRegion_token(node.mixinKeyword, HighlightRegionType.BUILT_IN);
     computer._addRegion_token(node.classKeyword, HighlightRegionType.KEYWORD);
     computer._addRegion_token(
-      node.name,
+      node.namePart.typeName,
       HighlightRegionType.CLASS,
       semanticTokenModifiers: {SemanticTokenModifiers.declaration},
     );
@@ -989,7 +1045,7 @@ class _DartUnitHighlightsComputerVisitor extends RecursiveAstVisitor<void> {
     // computer._addRegion_token(
     //     node.augmentKeyword, HighlightRegionType.BUILT_IN);
     computer._addRegion_token(node.enumKeyword, HighlightRegionType.KEYWORD);
-    computer._addRegion_token(node.name, HighlightRegionType.ENUM);
+    computer._addRegion_token(node.namePart.typeName, HighlightRegionType.ENUM);
     super.visitEnumDeclaration(node);
   }
 
@@ -1049,10 +1105,8 @@ class _DartUnitHighlightsComputerVisitor extends RecursiveAstVisitor<void> {
 
     computer._addRegion_token(node.typeKeyword, HighlightRegionType.BUILT_IN);
 
-    computer._addRegion_token(node.constKeyword, HighlightRegionType.BUILT_IN);
-
     computer._addRegion_token(
-      node.name,
+      node.primaryConstructor.typeName,
       HighlightRegionType.EXTENSION_TYPE,
       semanticTokenModifiers: {SemanticTokenModifiers.declaration},
     );
@@ -1538,6 +1592,24 @@ class _DartUnitHighlightsComputerVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
+  void visitPrimaryConstructorBody(PrimaryConstructorBody node) {
+    computer._addRegion_token(node.thisKeyword, HighlightRegionType.KEYWORD);
+    super.visitPrimaryConstructorBody(node);
+  }
+
+  @override
+  void visitPrimaryConstructorDeclaration(PrimaryConstructorDeclaration node) {
+    computer._addRegion_token(node.constKeyword, HighlightRegionType.KEYWORD);
+    super.visitPrimaryConstructorDeclaration(node);
+  }
+
+  @override
+  void visitPrimaryConstructorName(PrimaryConstructorName node) {
+    computer._addRegion_token(node.name, HighlightRegionType.CONSTRUCTOR);
+    super.visitPrimaryConstructorName(node);
+  }
+
+  @override
   void visitRecordLiteral(RecordLiteral node) {
     computer._addRegion_node(node, HighlightRegionType.LITERAL_RECORD);
     computer._addRegion_token(node.constKeyword, HighlightRegionType.KEYWORD);
@@ -1562,31 +1634,6 @@ class _DartUnitHighlightsComputerVisitor extends RecursiveAstVisitor<void> {
     }
 
     super.visitRecordTypeAnnotation(node);
-  }
-
-  @override
-  void visitRepresentationConstructorName(RepresentationConstructorName node) {
-    computer._addRegion_token(
-      node.name,
-      HighlightRegionType.CONSTRUCTOR,
-      semanticTokenType: SemanticTokenTypes.method,
-      semanticTokenModifiers: {
-        CustomSemanticTokenModifiers.constructor,
-        SemanticTokenModifiers.declaration,
-      },
-    );
-
-    super.visitRepresentationConstructorName(node);
-  }
-
-  @override
-  void visitRepresentationDeclaration(RepresentationDeclaration node) {
-    computer._addRegion_token(
-      node.fieldName,
-      HighlightRegionType.INSTANCE_FIELD_DECLARATION,
-    );
-
-    super.visitRepresentationDeclaration(node);
   }
 
   @override
@@ -1636,10 +1683,17 @@ class _DartUnitHighlightsComputerVisitor extends RecursiveAstVisitor<void> {
       HighlightRegionType.KEYWORD,
     );
 
-    var declaredElement = node.declaredFragment?.element;
+    computer._addRegion_token(
+      node.covariantKeyword,
+      HighlightRegionType.KEYWORD,
+    );
+
+    computer._addRegion_token(node.keyword, HighlightRegionType.KEYWORD);
+
+    var declaredElement = node.declaredFragment!.element;
     computer._addRegion_token(
       node.name,
-      declaredElement?.type is DynamicType
+      declaredElement.type is DynamicType
           ? HighlightRegionType.DYNAMIC_PARAMETER_DECLARATION
           : HighlightRegionType.PARAMETER_DECLARATION,
       additionalSemanticTokenModifiers: _additionalModifiersForElement(
@@ -1813,6 +1867,7 @@ class _DartUnitHighlightsComputerVisitor extends RecursiveAstVisitor<void> {
         node.declaredFragment?.element,
       ),
     );
+    computer._addRegion_token(node.extendsKeyword, HighlightRegionType.KEYWORD);
     super.visitTypeParameter(node);
   }
 
@@ -2056,4 +2111,9 @@ extension on StringInterpolation {
     (false, false, true) => Quote.Single,
     (false, false, false) => Quote.Double,
   };
+}
+
+extension on DartType? {
+  bool get isFunction =>
+      this is FunctionType || (this?.isDartCoreFunction ?? false);
 }

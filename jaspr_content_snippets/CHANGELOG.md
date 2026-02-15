@@ -1,6 +1,7 @@
 ## 0.2.3
 
 - Update `sqlparser` to `0.43.0`.
+- Support `analyzer` versions `10.x`.
 
 ## 0.2.2
 
