@@ -1690,10 +1690,10 @@ class _DartUnitHighlightsComputerVisitor extends RecursiveAstVisitor<void> {
 
     computer._addRegion_token(node.keyword, HighlightRegionType.KEYWORD);
 
-    var declaredElement = node.declaredFragment!.element;
+    var declaredElement = node.declaredFragment?.element;
     computer._addRegion_token(
       node.name,
-      declaredElement.type is DynamicType
+      declaredElement?.type is DynamicType
           ? HighlightRegionType.DYNAMIC_PARAMETER_DECLARATION
           : HighlightRegionType.PARAMETER_DECLARATION,
       additionalSemanticTokenModifiers: _additionalModifiersForElement(

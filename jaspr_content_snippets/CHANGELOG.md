@@ -1,3 +1,7 @@
+## 0.2.4
+
+- Fix crash when highlighting formal parameters in Dart.
+
 ## 0.2.3
 
 - Update `sqlparser` to `0.43.0`.
