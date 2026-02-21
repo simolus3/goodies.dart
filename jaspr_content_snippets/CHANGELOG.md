@@ -1,3 +1,7 @@
+## 0.2.5
+
+- Support `jaspr_content` version `0.5.0`.
+
 ## 0.2.4
 
 - Fix crash when highlighting formal parameters in Dart.
