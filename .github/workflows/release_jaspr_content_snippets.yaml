@@ -1,0 +1,14 @@
+name: Release jaspr_content_snippets
+
+on:
+  push:
+    tags:
+      - 'release/jaspr_content_snippets/[0-9]+.[0-9]+.[0-9]+*'
+
+jobs:
+  publish:
+    permissions:
+      id-token: write # Required for authentication using OIDC
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      working-directory: jaspr_content_snippets/
