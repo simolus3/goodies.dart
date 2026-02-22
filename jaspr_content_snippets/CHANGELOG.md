@@ -1,3 +1,7 @@
+## 0.2.6-wip
+
+- Support versions `0.44.x` of `sqlparser`.
+
 ## 0.2.5
 
 - Support `jaspr_content` version `0.5.0`.
