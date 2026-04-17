@@ -1,26 +1,16 @@
-import 'dart:math';
-
 import 'package:weblocks/weblocks.dart';
 import 'package:test/test.dart';
 
 void main() {
-  late String prefix;
-
-  setUp(() {
-    const chars = 'abcdefghijklmnopqrstuvwxyz';
-
-    final prefixBuilder = StringBuffer();
-    for (var i = 0; i < 8; i++) {
-      prefixBuilder.writeCharCode(
-        chars.codeUnitAt(_random.nextInt(chars.length)),
-      );
-    }
-    prefix = prefixBuilder.toString();
+  setUp(() async {
+    final current = await lockManager.query();
+    expect(current.held, isEmpty);
+    expect(current.pending, isEmpty);
   });
 
   group('basic tests', () {
     test('single lock/unlock cycle', () async {
-      final request = lockManager.request(prefix);
+      final request = lockManager.request('single-lock');
       final held = (await request.completion)!;
 
       held.release();
@@ -31,7 +21,7 @@ void main() {
       expect(snapshot.held, isEmpty);
       expect(snapshot.pending, isEmpty);
 
-      final held = await lockManager.request(prefix).completion;
+      final held = await lockManager.request('for-snapshot').completion;
       snapshot = await lockManager.query();
       expect(snapshot.held, hasLength(1));
       expect(snapshot.pending, isEmpty);
@@ -44,13 +34,14 @@ void main() {
     });
 
     test('shared', () async {
+      const lockName = 'shared';
       final shared = await Future.wait([
         for (var i = 0; i < 10; i++)
-          lockManager.request(prefix, exclusive: false).completion,
+          lockManager.request(lockName, exclusive: false).completion,
       ]);
       expect(shared, everyElement(isNotNull));
 
-      final exclusive = lockManager.request(prefix);
+      final exclusive = lockManager.request(lockName);
       var snapshot = await lockManager.query();
       expect(snapshot.held, hasLength(10));
       expect(snapshot.pending, hasLength(1));
@@ -65,33 +56,35 @@ void main() {
     });
 
     test('steal', () async {
-      final a = (await lockManager.request(prefix).completion)!;
+      final a = (await lockManager.request('steal').completion)!;
       expect(a.isStolen, isFalse);
 
-      final b = (await lockManager.request(prefix, steal: true).completion)!;
+      final b = (await lockManager.request('steal', steal: true).completion)!;
       expect(a.isStolen, true);
       b.release();
     });
 
     test('ifAvailable', () async {
-      final a = (await lockManager.request(prefix).completion)!;
+      final a = (await lockManager.request('ifAvailable').completion)!;
 
       expect(
-        await lockManager.request(prefix, ifAvailable: true).completion,
+        await lockManager.request('ifAvailable', ifAvailable: true).completion,
         isNull,
       );
       a.release();
       await pumpEventQueue();
 
-      final b = await lockManager.request(prefix, ifAvailable: true).completion;
+      final b = await lockManager
+          .request('ifAvailable', ifAvailable: true)
+          .completion;
       expect(b, isNotNull);
       b!.release();
     });
 
     test('cancel', () async {
-      final blocker = await lockManager.request(prefix).completion;
+      final blocker = await lockManager.request('cancel').completion;
 
-      final request = lockManager.request(prefix);
+      final request = lockManager.request('cancel');
       request.cancel();
       expect(request.completion, throwsA(isA<LockRequestCancelled>()));
 
@@ -123,17 +116,23 @@ void main() {
     });
 
     test('cannot cancel with steal', () async {
-      final request = lockManager.request(prefix, steal: true);
+      final request = lockManager.request('cancel-with-steal', steal: true);
       expect(() => request.cancel(), _throws);
+
+      (await request.completion)!.release();
     });
 
     test('cannot cancel with ifAvailable', () async {
-      final request = lockManager.request(prefix, ifAvailable: true);
+      final request = lockManager.request(
+        'cancel-with-if-available',
+        ifAvailable: true,
+      );
       expect(() => request.cancel(), _throws);
+      (await request.completion)!.release();
     });
 
     test('cannot cancel after lock was granted', () async {
-      final request = lockManager.request(prefix);
+      final request = lockManager.request('cancel-after-granted');
       final held = await request.completion;
       expect(() => request.cancel(), _throws);
       held!.release();
@@ -142,8 +141,8 @@ void main() {
 
   group('broadcast channel', () {
     test('sends events to other channels', () async {
-      final a = lockManager.broadcastChannel(prefix);
-      final b = lockManager.broadcastChannel(prefix);
+      final a = lockManager.broadcastChannel('broadcast');
+      final b = lockManager.broadcastChannel('broadcast');
       a.send('before-listen');
       await pumpEventQueue();
 
@@ -162,7 +161,7 @@ void main() {
     });
 
     test('closing emits done event', () async {
-      final channel = lockManager.broadcastChannel(prefix);
+      final channel = lockManager.broadcastChannel('close-done');
       final didClose = expectLater(channel, emitsDone);
 
       channel.close();
@@ -170,16 +169,16 @@ void main() {
     });
 
     test('does not allow listening after close', () {
-      final channel = lockManager.broadcastChannel(prefix)..close();
+      final channel = lockManager.broadcastChannel('listen-after-close')
+        ..close();
       expect(() => channel.listen(null), throwsStateError);
     });
 
     test('does not allow sending after close', () {
-      final channel = lockManager.broadcastChannel(prefix)..close();
+      final channel = lockManager.broadcastChannel('send-after-close')..close();
       expect(() => channel.send('foo'), throwsStateError);
     });
   });
 }
 
-final Random _random = Random();
 final _throws = throwsA(anything);
