@@ -1,6 +1,6 @@
 name: jaspr_content_snippets
 description: External content snippets for `jaspr_content` sites.
-version: 0.2.6
+version: 0.2.7
 repository: https://github.com/simolus3/goodies.dart/tree/main/jaspr_content_snippets
 issue_tracker: https://github.com/simolus3/goodies.dart/issues
 
@@ -13,8 +13,8 @@ topics:
   - build
 
 dependencies:
-  _fe_analyzer_shared: '>=93.0.0 <100.0.0'
-  analyzer: '>=10.0.0 <13.0.0'
+  _fe_analyzer_shared: ^103.0.0
+  analyzer: ^13.0.0
   analyzer_plugin: ^0.14.0
   build: ^4.0.0
   build_config: ^1.2.0

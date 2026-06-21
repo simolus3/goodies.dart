@@ -1,3 +1,7 @@
+## 0.2.7
+
+- Require `analyzer` versions `13.x`.
+
 ## 0.2.6
 
 - Support `analyzer` versions `11.x` and `12.x`, `jaspr` versions `0.23.x`, `sqlparser` versions `0.44.x`.
