@@ -1,3 +1,7 @@
+## 0.2.8-beta.0
+
+- Update dependencies: `analyzer` to 14.x, `jaspr` to 0.24.x, `jaspr_content` to 0.6.0.
+
 ## 0.2.7
 
 - Require `analyzer` versions `13.x`.
