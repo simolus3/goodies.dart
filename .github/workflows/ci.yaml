@@ -11,7 +11,7 @@ jobs:
   compile_native_linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-unknown-linux-gnu,x86_64-unknown-linux-gnu,riscv64gc-unknown-linux-gnu,armv7-unknown-linux-gnueabihf,aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
@@ -51,7 +51,7 @@ jobs:
           cp target/android/x86_64/libdart_locks.so out/libdart_locks.android_x86_64.so
           cp target/android/armeabi-v7a/libdart_locks.so out/libdart_locks.android_v7a.so
           cp target/android/arm64-v8a/libdart_locks.so out/libdart_locks.android_v8a.so
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: locks-linux
           retention-days: 1
@@ -60,7 +60,7 @@ jobs:
   compile_native_macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-apple-darwin,aarch64-apple-darwin,aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
@@ -85,7 +85,7 @@ jobs:
           cp target/aarch64-apple-ios/release/libdart_locks.dylib out/libdart_locks.ios_aarch64.dylib
           cp target/aarch64-apple-ios-sim/release/libdart_locks.dylib out/libdart_locks.ios_sim_aarch64.dylib
           cp target/x86_64-apple-ios/release/libdart_locks.dylib out/libdart_locks.ios_sim_x64.dylib
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: locks-apple
           retention-days: 1
@@ -94,7 +94,7 @@ jobs:
   compile_native_windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
@@ -109,7 +109,7 @@ jobs:
           mkdir out
           cp target/x86_64-pc-windows-msvc/release/dart_locks.dll out/dart_locks.win_x64.dll
           cp target/aarch64-pc-windows-msvc/release/dart_locks.dll out/dart_locks.win_aarch64.dll
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: locks-windows
           retention-days: 1
@@ -121,12 +121,12 @@ jobs:
       dart-version: ${{ steps.setup-dart.outputs.dart-version }}
       cache-key: dart-packages-${{ steps.deps-after.outputs.lockfiles }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dart-lang/setup-dart@v1
         id: setup-dart
         with:
           sdk: beta
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: |
             ${{ env.PUB_CACHE }}
@@ -160,7 +160,7 @@ jobs:
 
       - name: "Update cache due to changed pubspec.lock"
         if: ${{ !failure() && ( steps.deps-after.outputs.lockfiles != steps.deps-before.outputs.lockfiles) }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             ${{ env.PUB_CACHE }}
@@ -176,11 +176,11 @@ jobs:
         working-directory: shelf_multipart
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: ${{ needs.setup.outputs.dart-version }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: |
             ${{ env.PUB_CACHE }}
@@ -204,11 +204,11 @@ jobs:
         working-directory: weblocks
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: ${{ needs.setup.outputs.dart-version }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: |
             ${{ env.PUB_CACHE }}
@@ -223,7 +223,7 @@ jobs:
         run: dart analyze --fatal-infos
 
       - name: Download libs
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           merge-multiple: true
           path: weblocks/assets
@@ -241,11 +241,11 @@ jobs:
         working-directory: jaspr_content_snippets
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: ${{ needs.setup.outputs.dart-version }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: |
             ${{ env.PUB_CACHE }}
