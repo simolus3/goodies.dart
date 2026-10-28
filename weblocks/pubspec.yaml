@@ -9,8 +9,8 @@ environment:
 
 dependencies:
   ffi: ^2.1.4
-  hooks: ^1.0.0
-  code_assets: ^1.0.0
+  hooks: ^2.2.0
+  code_assets: ^2.1.0
   web: ^1.1.1
   path: ^1.9.1
 
