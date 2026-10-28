@@ -99,32 +99,32 @@ Future<void> _cargoBuild() async {
   }
 }
 
-const _androidBuilds = {
+final _androidBuilds = {
   Architecture.arm: 'libdart_locks.android_v7a.so',
   Architecture.arm64: 'libdart_locks.android_v8a.so',
   Architecture.x64: 'libdart_locks.android_x86_64.so',
 };
 
-const _iosBuilds = {Architecture.arm64: 'libdart_locks.ios_aarch64.dylib'};
+final _iosBuilds = {Architecture.arm64: 'libdart_locks.ios_aarch64.dylib'};
 
-const _iosSimulatorBuilds = {
+final _iosSimulatorBuilds = {
   Architecture.arm64: 'libdart_locks.ios_sim_aarch64.dylib',
   Architecture.x64: 'libdart_locks.ios_sim_x64.dylib',
 };
 
-const _macosBuilds = {
+final _macosBuilds = {
   Architecture.arm64: 'libdart_locks.macos_aarch64.dylib',
   Architecture.x64: 'libdart_locks.macos_x64.dylib',
 };
 
-const _linuxBuilds = {
+final _linuxBuilds = {
   Architecture.arm: 'libdart_locks.linux_arm7.so',
   Architecture.arm64: 'libdart_locks.linux_aarch64.so',
   Architecture.x64: 'libdart_locks.linux_x64.so',
   Architecture.riscv64: 'libdart_locks.linux_riscv.so',
 };
 
-const _windowsBuilds = {
+final _windowsBuilds = {
   Architecture.arm64: 'dart_locks.win_aarch64.dll',
   Architecture.x64: 'dart_locks.win_x64.dll',
 };
