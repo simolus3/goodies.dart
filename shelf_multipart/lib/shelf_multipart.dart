@@ -240,9 +240,7 @@ class FormData {
 }
 
 final _token = RegExp(r'[^()<>@,;:"\\/[\]?={} \t\x00-\x1F\x7F]+');
-final _whitespace = RegExp(r'(?:(?:\r\n)?[ \t]+)*');
-final _quotedString = RegExp(r'"(?:[^"\x00-\x1F\x7F]|\\.)*"');
-final _quotedPair = RegExp(r'\\(.)');
+final _whitespace = RegExp(r'(?:(?:\r\n)?[ \t])*');
 
 /// Parses a `content-disposition: form-data; arg1="val1"; ...` header.
 Map<String, String>? _parseFormDataContentDisposition(String header) {
@@ -258,21 +256,13 @@ Map<String, String>? _parseFormDataContentDisposition(String header) {
   while (scanner.scan(';')) {
     scanner
       ..scan(_whitespace)
-      ..scan(_token);
+      ..expect(_token, name: 'parameter name');
     final key = scanner.lastMatch![0]!;
     scanner.expect('=');
 
-    String value;
-    if (scanner.scan(_token)) {
-      value = scanner.lastMatch![0]!;
-    } else {
-      scanner.expect(_quotedString, name: 'quoted string');
-      final string = scanner.lastMatch![0]!;
-
-      value = string
-          .substring(1, string.length - 1)
-          .replaceAllMapped(_quotedPair, (match) => match[1]!);
-    }
+    final value = scanner.scan(_token)
+        ? scanner.lastMatch![0]!
+        : _readQuotedString(scanner);
 
     scanner.scan(_whitespace);
     params[key] = value;
@@ -281,3 +271,40 @@ Map<String, String>? _parseFormDataContentDisposition(String header) {
   scanner.expectDone();
   return params;
 }
+
+/// Reads a `quoted-string` (RFC 9110, section 5.6.4) and returns its unescaped
+/// content.
+String _readQuotedString(StringScanner scanner) {
+  // https://www.rfc-editor.org/rfc/rfc9110.html#name-quoted-strings
+  final start = scanner.position;
+  scanner.expect('"', name: 'quoted string');
+
+  final buffer = StringBuffer();
+  while (!scanner.isDone) {
+    switch (scanner.readChar()) {
+      case _quote:
+        return buffer.toString();
+      case _backslash:
+        if (scanner.isDone) break;
+        buffer.writeCharCode(_checkQuotedChar(scanner, scanner.readChar()));
+      case final char:
+        buffer.writeCharCode(_checkQuotedChar(scanner, char));
+    }
+  }
+
+  scanner.error('unterminated quoted string',
+      position: start, length: scanner.position - start);
+}
+
+/// Rejects control characters, which may not appear in a quoted string (not
+/// even when escaped).
+int _checkQuotedChar(StringScanner scanner, int char) {
+  if ((char < 0x20 && char != 0x09) || char == 0x7F) {
+    scanner.error('control character in quoted string',
+        position: scanner.position - 1, length: 1);
+  }
+  return char;
+}
+
+const int _quote = 0x22;
+const int _backslash = 0x5C;

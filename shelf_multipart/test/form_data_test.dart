@@ -63,4 +63,96 @@ void main() {
 
     expect(await reader.moveNext(), isFalse);
   });
+
+  test('rejects an unterminated quoted name without excessive backtracking',
+      () async {
+    final slashes = String.fromCharCodes(List.filled(44, 0x5c));
+    final request = Request(
+      'POST',
+      _uri,
+      headers: {'content-type': 'multipart/form-data; boundary=end'},
+      body: '--end\r\n'
+          'content-disposition: form-data; name="$slashes\r\n'
+          '\r\n'
+          'x\r\n'
+          '--end--\r\n',
+    );
+
+    final watch = Stopwatch()..start();
+    await expectLater(
+      request.formData()!.formData.toList(),
+      throwsA(isA<Exception>()),
+    );
+    expect(watch.elapsed, lessThan(const Duration(seconds: 1)));
+  });
+
+  test('accepts an escaped quote in a form-data name', () async {
+    final escape = String.fromCharCode(0x5c);
+    final request = Request(
+      'POST',
+      _uri,
+      headers: {'content-type': 'multipart/form-data; boundary=end'},
+      body: '--end\r\n'
+          'content-disposition: form-data; name="a$escape"b"\r\n'
+          '\r\n'
+          'x\r\n'
+          '--end--\r\n',
+    );
+
+    var fields = 0;
+    await for (final field in request.formData()!.formData) {
+      expect(field.name, 'a"b');
+      expect(await field.part.readString(), 'x');
+      fields++;
+    }
+    expect(fields, 1);
+  });
+
+  group('rejects invalid content-disposition', () {
+    const cases = {
+      'unterminated quoted string': 'form-data; name="abc',
+      'quoted string ending in escape': 'form-data; name="abc\\',
+      'control character in quoted string': 'form-data; name="a\x01b"',
+      'escaped control character': 'form-data; name="a\\\x01b"',
+      'missing parameter name': 'form-data; ="x"',
+    };
+
+    cases.forEach((description, disposition) {
+      test(description, () async {
+        final request = Request(
+          'POST',
+          _uri,
+          headers: {'content-type': 'multipart/form-data; boundary=end'},
+          body: '--end\r\n'
+              'content-disposition: $disposition\r\n'
+              '\r\n'
+              'x\r\n'
+              '--end--\r\n',
+        );
+
+        await expectLater(
+          request.formData()!.formData.toList(),
+          throwsA(isA<FormatException>()),
+        );
+      });
+    });
+  });
+
+  test('parses quoted strings with tabs and non-ASCII characters', () async {
+    final request = Request(
+      'POST',
+      _uri,
+      headers: {'content-type': 'multipart/form-data; boundary=end'},
+      body: '--end\r\n'
+          'content-disposition: form-data; name="a\tb"; filename="😀.txt"\r\n'
+          '\r\n'
+          'x\r\n'
+          '--end--\r\n',
+    );
+
+    final fields = await request.formData()!.formData.toList();
+    expect(fields, hasLength(1));
+    expect(fields.single.name, 'a\tb');
+    expect(fields.single.filename, '😀.txt');
+  });
 }

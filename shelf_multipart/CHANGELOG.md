@@ -1,3 +1,7 @@
+## 2.0.2
+
+- Avoid backtracking in regular expressions when parsing headers.
+
 ## 2.0.1
 
 - Support version 2.x of the `mime` package.
